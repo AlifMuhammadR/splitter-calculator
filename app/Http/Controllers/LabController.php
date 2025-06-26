@@ -27,6 +27,43 @@ class LabController extends Controller
         ]);
     }
 
+    public function saveBoth(Request $request, $id)
+    {
+        $lab = Lab::findOrFail($id);
+
+        // Validasi isi
+        $data = $request->validate([
+            'nodes' => 'required|array',
+            'connections' => 'required|array',
+            'power' => 'nullable|numeric',
+            'name' => 'nullable|string',
+            'description' => 'nullable|string',
+        ]);
+
+        // ===== ✅ SIMPAN FILE JSON =====
+        $jsonContent = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $slug = Str::slug($lab->name);
+        $path = $lab->group
+            ? 'labs/' . $lab->group->fullSlugPath() . '/' . $slug . '.json'
+            : 'labs/' . $slug . '.json';
+
+        Storage::disk('local')->put($path, $jsonContent);
+
+        // ===== ✅ SIMPAN KE DATABASE TOPOLOGI =====
+        \App\Models\Topology::updateOrCreate(
+            ['lab_id' => $id],
+            [
+                'nodes' => json_encode($data['nodes']),
+                'connections' => json_encode($data['connections']),
+                'power' => $data['power'] ?? null,
+                'name' => $data['name'] ?? $lab->name,
+                'description' => $data['description'] ?? $lab->description,
+            ]
+        );
+
+        return response()->json(['success' => true, 'message' => 'Topology saved to both file and DB.']);
+    }
+
 
     public function ajaxFolder($id = 0, Request $request)
     {
@@ -103,22 +140,6 @@ class LabController extends Controller
         } else {
             return response()->json(['error' => 'File not found.'], 404);
         }
-    }
-
-    public function updateJson(Request $request, $id)
-    {
-        $lab = Lab::findOrFail($id);
-
-        $jsonContent = json_encode($request->all(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-        $slug = Str::slug($lab->name);
-        $path = $lab->group
-            ? 'labs/' . $lab->group->fullSlugPath() . '/' . $slug . '.json'
-            : 'labs/' . $slug . '.json';
-
-        Storage::disk('local')->put($path, $jsonContent);
-
-        return response()->json(['success' => true]);
     }
 
     /**

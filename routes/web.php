@@ -28,15 +28,16 @@ Route::resource('/home', \App\Http\Controllers\HomeController::class)->name('ind
 Route::resource('/lab', LabController::class)->name('index', 'lab');
 Route::resource('/lab-group', LabGroupController::class)->name('index', 'lab-group');
 
-// Lab specific routes
+// Route Lab specific routes
 Route::prefix('lab')->group(function () {
     Route::get('/folder/{id?}', [LabController::class, 'ajaxFolder']);
     Route::get('/preview/{id}', [LabController::class, 'getJsonPreview']);
     Route::get('/{lab}/topologi', [LabController::class, 'topologi'])->name('lab.canvas');
-    Route::post('/{id}/update-json', [LabController::class, 'updateJson']);
     Route::get('/{id}/json', [LabController::class, 'getJsonExport']);
     Route::post('/import', [LabController::class, 'importLab']);
 });
+
+Route::post('/lab/{id}/save-both', [LabController::class, 'saveBoth']);
 
 // LabGroup specific routes
 Route::prefix('lab-group')->group(function () {
