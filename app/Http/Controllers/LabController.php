@@ -37,6 +37,7 @@ class LabController extends Controller
             'connections' => 'required|array',
             'power' => 'nullable|numeric',
             'name' => 'nullable|string',
+            'author' => 'nullable|string',
             'description' => 'nullable|string',
         ]);
 
@@ -57,6 +58,7 @@ class LabController extends Controller
                 'connections' => json_encode($data['connections']),
                 'power' => $data['power'] ?? null,
                 'name' => $data['name'] ?? $lab->name,
+                'author' => $data['author'] ?? $lab->author,
                 'description' => $data['description'] ?? $lab->description,
             ]
         );

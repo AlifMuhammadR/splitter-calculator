@@ -51,6 +51,7 @@ class TopologyController extends Controller
             'connections' => 'required|array',
             'power' => 'nullable|numeric',
             'name' => 'nullable|string',
+            'author' => 'nullable|string',
             'description' => 'nullable|string',
         ]);
 
@@ -62,6 +63,7 @@ class TopologyController extends Controller
                 'connections' => json_encode($data['connections']),
                 'power' => $data['power'] ?? null,
                 'name' => $data['name'] ?? null,
+                'author' => $data['author'] ?? null,
                 'description' => $data['description'] ?? null,
             ]
         );
