@@ -219,7 +219,7 @@ function confirmDeleteFolder(folderId, folderName) {
 
             Swal.fire({
                 title: 'Delete Folder?',
-                html: `You are about to delete lab <strong>${folderName}</strong>. This action cannot be undone!`,
+                html: `You are about to delete lab <strong>${folderName}</strong>. This action cannot be undone!. ${warningHtml}`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
