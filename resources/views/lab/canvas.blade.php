@@ -319,16 +319,16 @@
                     '') || '';
             }
 
-            // ADD NODE BARU
-            window.addNode = function(type) {
-                if (type === 'Splitter') {
-                    pendingSplitter = true;
-                    new bootstrap.Modal(document.getElementById('splitterModal')).show();
-                    return;
-                }
-                let el = document.createElement("div");
-                el.classList.add("position-absolute", "p-2", "bg-white", "border", "rounded", "text-center");
-                el.setAttribute("id", `node-${nodeId}`);
+        // ADD NODE BARU
+        window.addNode = function(type) {
+            if (type === 'Splitter') {
+                pendingSplitter = true;
+                new bootstrap.Modal(document.getElementById('splitterModal')).show();
+                return;
+            }
+            let el = document.createElement("div");
+            el.classList.add("position-absolute", "p-2", "bg-white", "border", "rounded", "text-center");
+            el.setAttribute("id", `node-${nodeId}`);
 
                 const canvas = document.getElementById("map-canvas");
                 const centerX = canvas.clientWidth / 2;
@@ -359,8 +359,8 @@
                 el.dataset.power = power;
                 el.dataset.type = type;
 
-                const powerDisplay = power ? `${parseFloat(power).toFixed(2)} dB` : '';
-                el.innerHTML = `
+            const powerDisplay = power ? `${parseFloat(power).toFixed(2)} dB` : '';
+            el.innerHTML = `
         <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">&times;</button>
         <strong>${label}</strong>
         <div class="output-power" style="font-size: 12px; color: green;">${powerDisplay}</div>
@@ -371,95 +371,78 @@
                     containment: "parent"
                 });
 
-                // Tombol hapus node
-                el.querySelector('.btn-delete-node').onclick = function(e) {
-                    e.stopPropagation();
-                    Swal.fire({
-                        title: 'Delete this node?',
-                        text: 'All connections will be deleted.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Yes, delete!',
-                        confirmButtonColor: 'red',
-                        cancelButtonText: 'Cancel',
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // Hapus semua koneksi yang terkait
-                            lines = lines.filter(conn => {
-                                if (conn.from === el.id || conn.to === el.id) {
-                                    jsPlumb.deleteConnection(conn.conn);
-                                    return false;
-                                }
-                                return true;
-                            });
-
-                            // Hapus node dari canvas
-                            jsPlumb.remove(el);
-
-                            // Tambahkan ke log undo
-                            actions.push({
-                                type: 'delete-node',
-                                node: el
-                            });
-
-                            // ✅ Tambahkan toast notifikasi
-                            Swal.fire({
-                                toast: true,
-                                position: 'top-end',
-                                icon: 'success',
-                                title: 'The node has been deleted!',
-                                showConfirmButton: false,
-                                timer: 2000,
-                                timerProgressBar: true
-                            });
-                        }
-                    });
-                };
-
-                // --- NODE-TO-NODE CLICK ---
-                el.onclick = function(e) {
-                    if (e.target.classList.contains("jsplumb-endpoint")) return;
-                    if (e.target.classList.contains("btn-delete-node"))
-                        return; // biar klik tombol hapus tidak trigger connect
-                    if (!selectedNode) {
-                        selectedNode = el;
-                        el.classList.add('border-primary');
-                    } else if (selectedNode !== el) {
-                        // ... (popup koneksi node)
-                    } else {
-                        el.classList.remove('border-primary');
-                        selectedNode = null;
+            // Tombol hapus node
+            el.querySelector('.btn-delete-node').onclick = function(e) {
+                e.stopPropagation();
+                Swal.fire({
+                    title: 'Hapus node ini?',
+                    text: 'Semua kabel yang terhubung ke node juga akan dihapus.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, hapus!',
+                    confirmButtonColor: 'red',
+                    cancelButtonText: 'Batal',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        lines = lines.filter(conn => {
+                            if (conn.from === el.id || conn.to === el.id) {
+                                jsPlumb.deleteConnection(conn.conn);
+                                return false;
+                            }
+                            return true;
+                        });
+                        jsPlumb.remove(el);
+                        actions.push({
+                            type: 'delete-node',
+                            node: el
+                        });
                     }
-                };
+                });
+            };
 
-                // ENDPOINTS (sesuaikan splitter)
-                let endpointCount = 1;
-                let anchors = ["Top", "Right", "Bottom", "Left"];
-                if (type.startsWith('Splitter')) {
-                    let split = type.split(' ')[1];
-                    let nPorts = parseInt(split.split(':')[1]) || 4;
-                    endpointCount = nPorts;
-                    anchors = [];
-                    for (let i = 0; i < nPorts; i++) {
-                        anchors.push([(i + 1) / (nPorts + 1), 1, 0, 1]);
-                    }
+            // --- NODE-TO-NODE CLICK ---
+            el.onclick = function(e) {
+                if (e.target.classList.contains("jsplumb-endpoint")) return;
+                if (e.target.classList.contains("btn-delete-node")) return; // biar klik tombol hapus tidak trigger connect
+                if (!selectedNode) {
+                    selectedNode = el;
+                    el.classList.add('border-primary');
+                } else if (selectedNode !== el) {
+                    // ... (popup koneksi node)
+                } else {
+                    el.classList.remove('border-primary');
+                    selectedNode = null;
                 }
-                for (let i = 0; i < endpointCount; i++) {
-                    jsPlumb.addEndpoint(el, {
-                        anchor: anchors[i % anchors.length],
-                        isSource: true,
-                        isTarget: true,
-                        maxConnections: -1,
-                        endpoint: "Blank",
-                        paintStyle: {
-                            fill: "#3e46"
-                        },
-                        connector: ["Flowchart", {
-                            cornerRadius: 2,
-                            stub: 30
-                        }]
-                    });
+            };
+
+            // ENDPOINTS (sesuaikan splitter)
+            let endpointCount = 1;
+            let anchors = ["Top", "Right", "Bottom", "Left"];
+            if (type.startsWith('Splitter')) {
+                let split = type.split(' ')[1];
+                let nPorts = parseInt(split.split(':')[1]) || 4;
+                endpointCount = nPorts;
+                anchors = [];
+                for (let i = 0; i < nPorts; i++) {
+                    anchors.push([(i + 1) / (nPorts + 1), 1, 0, 1]);
                 }
+            }
+            for (let i = 0; i < endpointCount; i++) {
+                jsPlumb.addEndpoint(el, {
+                    anchor: anchors[i % anchors.length],
+                    isSource: true,
+                    isTarget: true,
+                    maxConnections: -1,
+                    endpoint: "Blank",
+                    paintStyle: {
+                        fill: "#3e46"
+                    },
+                    connector: ["Flowchart", {
+                        cornerRadius: 2,
+                        stub: 30
+                    }]
+                });
+            }
 
                 nodeId++;
                 actions.push({
@@ -784,22 +767,22 @@
                 });
             };
 
-            // ADD NODE DARI DB/IMPORT/LOAD
-            window.addNodeFromDB = function(node) {
-                if (!node.type) node.type = 'Client';
-                let el = document.createElement("div");
-                el.classList.add("position-absolute", "p-2", "bg-white", "border", "rounded", "text-center");
-                el.setAttribute("id", node.id);
-                el.style.top = node.top;
-                el.style.left = node.left;
-                el.dataset.loss = node.loss;
-                el.dataset.power = node.power;
-                el.dataset.type = node.type;
+        // ADD NODE DARI DB/IMPORT/LOAD
+        window.addNodeFromDB = function(node) {
+            if (!node.type) node.type = 'Client';
+            let el = document.createElement("div");
+            el.classList.add("position-absolute", "p-2", "bg-white", "border", "rounded", "text-center");
+            el.setAttribute("id", node.id);
+            el.style.top = node.top;
+            el.style.left = node.left;
+            el.dataset.loss = node.loss;
+            el.dataset.power = node.power;
+            el.dataset.type = node.type;
 
-                el.innerHTML = `
+            el.innerHTML = `
         <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">&times;</button>
         <strong>${node.type}</strong>
-        <div class="output-power" style="font-size: 12px; color: green;">${parseFloat(node.power).toFixed(2)} dB</div>
+        <div class="output-power" style="font-size: 12px; color: green;">${powerDisplay}</div>
     `;
 
                 document.getElementById("map-canvas").appendChild(el);
@@ -807,82 +790,82 @@
                     containment: "parent"
                 });
 
-                // Tombol hapus node
-                el.querySelector('.btn-delete-node').onclick = function(e) {
-                    e.stopPropagation();
-                    Swal.fire({
-                        title: 'Hapus node ini?',
-                        text: 'Semua kabel yang terhubung ke node juga akan dihapus.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Ya, hapus!',
-                        confirmButtonColor: 'red',
-                        cancelButtonText: 'Batal',
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            lines = lines.filter(conn => {
-                                if (conn.from === el.id || conn.to === el.id) {
-                                    jsPlumb.deleteConnection(conn.conn);
-                                    return false;
-                                }
-                                return true;
-                            });
-                            jsPlumb.remove(el);
-                            actions.push({
-                                type: 'delete-node',
-                                node: el
-                            });
-                        }
-                    });
-                };
-
-                // --- NODE-TO-NODE CLICK ---
-                el.onclick = function(e) {
-                    if (e.target.classList.contains("jsplumb-endpoint")) return;
-                    if (e.target.classList.contains("btn-delete-node")) return;
-                    if (!selectedNode) {
-                        selectedNode = el;
-                        el.classList.add('border-primary');
-                    } else if (selectedNode !== el) {
-                        // ... (popup koneksi node)
-                    } else {
-                        el.classList.remove('border-primary');
-                        selectedNode = null;
+            // Tombol hapus node
+            el.querySelector('.btn-delete-node').onclick = function(e) {
+                e.stopPropagation();
+                Swal.fire({
+                    title: 'Hapus node ini?',
+                    text: 'Semua kabel yang terhubung ke node juga akan dihapus.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, hapus!',
+                    confirmButtonColor: 'red',
+                    cancelButtonText: 'Batal',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        lines = lines.filter(conn => {
+                            if (conn.from === el.id || conn.to === el.id) {
+                                jsPlumb.deleteConnection(conn.conn);
+                                return false;
+                            }
+                            return true;
+                        });
+                        jsPlumb.remove(el);
+                        actions.push({
+                            type: 'delete-node',
+                            node: el
+                        });
                     }
-                };
-
-                // ENDPOINTS
-                let endpointCount = 4;
-                let anchors = ["Top", "Right", "Bottom", "Left"];
-                if (node.type.startsWith('Splitter')) {
-                    let split = node.type.split(' ')[1];
-                    let nPorts = parseInt(split.split(':')[1]) || 4;
-                    endpointCount = nPorts;
-                    anchors = [];
-                    for (let i = 0; i < nPorts; i++) {
-                        anchors.push([(i + 1) / (nPorts + 1), 1, 0, 1]);
-                    }
-                }
-                for (let i = 0; i < endpointCount; i++) {
-                    jsPlumb.addEndpoint(el, {
-                        anchor: anchors[i % anchors.length],
-                        isSource: true,
-                        isTarget: true,
-                        maxConnections: -1,
-                        endpoint: ["Dot", {
-                            radius: 8
-                        }],
-                        paintStyle: {
-                            fill: "#3e4651"
-                        },
-                        connector: ["Flowchart", {
-                            cornerRadius: 2,
-                            stub: 30
-                        }]
-                    });
-                }
-                isTopologyChanged = true;
+                });
             };
+
+            // --- NODE-TO-NODE CLICK ---
+            el.onclick = function(e) {
+                if (e.target.classList.contains("jsplumb-endpoint")) return;
+                if (e.target.classList.contains("btn-delete-node")) return;
+                if (!selectedNode) {
+                    selectedNode = el;
+                    el.classList.add('border-primary');
+                } else if (selectedNode !== el) {
+                    // ... (popup koneksi node)
+                } else {
+                    el.classList.remove('border-primary');
+                    selectedNode = null;
+                }
+            };
+
+            // ENDPOINTS
+            let endpointCount = 4;
+            let anchors = ["Top", "Right", "Bottom", "Left"];
+            if (node.type.startsWith('Splitter')) {
+                let split = node.type.split(' ')[1];
+                let nPorts = parseInt(split.split(':')[1]) || 4;
+                endpointCount = nPorts;
+                anchors = [];
+                for (let i = 0; i < nPorts; i++) {
+                    anchors.push([(i + 1) / (nPorts + 1), 1, 0, 1]);
+                }
+            }
+            for (let i = 0; i < endpointCount; i++) {
+                jsPlumb.addEndpoint(el, {
+                    anchor: anchors[i % anchors.length],
+                    isSource: true,
+                    isTarget: true,
+                    maxConnections: -1,
+                    endpoint: ["Dot", {
+                        radius: 8
+                    }],
+                    paintStyle: {
+                        fill: "#3e4651"
+                    },
+                    connector: ["Flowchart", {
+                        cornerRadius: 2,
+                        stub: 30
+                    }]
+                });
+            }
+            isTopologyChanged = true;
+        };
 
             window.drawConnectionFromDB = function(conn) {
                 const fromEl = document.getElementById(conn.from);
