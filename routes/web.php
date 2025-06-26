@@ -7,10 +7,6 @@ use App\Http\Controllers\RestoreController;
 use App\Http\Controllers\TopologyController;
 use Illuminate\Support\Facades\Route;
 
-
-
-
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -22,35 +18,39 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// Redirect root to home page
 Route::get('/', function () {
-    return redirect()->route('home');
+    return redirect()->route('home.index');
 });
 
-
+// Resource routes for Home, Lab, and LabGroup
 Route::resource('/home', \App\Http\Controllers\HomeController::class)->name('index', 'home');
-Route::resource('/lab', \App\Http\Controllers\LabController::class)->name('index', 'lab');
-Route::resource('/lab-group', \App\Http\Controllers\LabGroupController::class)->name('index', 'lab-group');
+Route::resource('/lab', LabController::class)->name('index', 'lab');
+Route::resource('/lab-group', LabGroupController::class)->name('index', 'lab-group');
 
-//
+// Lab specific routes
+Route::prefix('lab')->group(function () {
+    Route::get('/folder/{id?}', [LabController::class, 'ajaxFolder']);
+    Route::get('/preview/{id}', [LabController::class, 'getJsonPreview']);
+    Route::get('/{lab}/topologi', [LabController::class, 'topologi'])->name('lab.canvas');
+    Route::post('/{id}/update-json', [LabController::class, 'updateJson']);
+    Route::get('/{id}/json', [LabController::class, 'getJsonExport']);
+    Route::post('/import', [LabController::class, 'importLab']);
+});
 
-Route::get('/lab/folder/{id?}', [LabController::class, 'ajaxFolder']);
-Route::get('/lab/preview/{id}', [LabController::class, 'getJsonPreview']);
-Route::post('/lab-group/{id}/rename', [LabGroupController::class, 'rename']);
-Route::get('/lab/{lab}/topologi', [LabController::class, 'topologi'])->name('lab.canvas');
-Route::get('/lab-group/{id}/check-contents', [LabGroupController::class, 'checkContents']);
-Route::post('/lab/{id}/update-json', [LabController::class, 'updateJson']);
-Route::delete('/lab-group/{id}', [LabGroupController::class, 'destroy']);
-Route::get('/lab/folder/{id}', [LabController::class, 'ajaxFolder']);
+// LabGroup specific routes
+Route::prefix('lab-group')->group(function () {
+    Route::post('/{id}/rename', [LabGroupController::class, 'rename']);
+    Route::get('/{id}/check-contents', [LabGroupController::class, 'checkContents']);
+    Route::delete('/{id}', [LabGroupController::class, 'destroy']);
+});
 
-//
-
-// Gabungan RESTORE
+// Restore and Delete (DB Only) routes
 Route::post('/restore/{type}/{id}', [RestoreController::class, 'restore']);
-// Gabungan DELETE dari DB only
 Route::delete('/delete-only-db/{type}/{id}', [RestoreController::class, 'deleteOnlyDb']);
 
-
-//
-
-Route::post('/topologi/save/{id}', [TopologyController::class, 'save']);
-Route::get('/topologi/load/{id}', [TopologyController::class, 'load']);
+// Topology routes
+Route::prefix('topologi')->group(function () {
+    Route::post('/save/{id}', [TopologyController::class, 'save']);
+    Route::get('/load/{id}', [TopologyController::class, 'load']);
+});

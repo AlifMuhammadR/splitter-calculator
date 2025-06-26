@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lab;
 use App\Models\LabGroup;
+use App\Models\Topology;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -283,5 +284,78 @@ class LabController extends Controller
     public function topologi(Lab $lab)
     {
         return view('lab.canvas', compact('lab'));
+    }
+
+    public function getJsonExport($id)
+    {
+        $lab = Lab::findOrFail($id);
+        $path = $lab->lab_group_id
+            ? 'labs/' . $lab->group->fullSlugPath() . '/' . $lab->slug . '.json'
+            : 'labs/' . $lab->slug . '.json';
+
+        if (Storage::exists($path)) {
+            return response()->json(json_decode(Storage::get($path), true));
+        }
+
+        return response()->json(['error' => 'File not found.'], 404);
+    }
+
+    public function importLab(Request $request)
+    {
+        $jsonString = $request->input('json_raw');
+        $folderId = $request->input('lab_group_id');
+        $folderId = $folderId ?: null; // Konversi "" ke null biar aman
+
+        $json = json_decode($jsonString, true);
+
+        if (!$json || !isset($json['name']) || !isset($json['author'])) {
+            return response()->json(['success' => false, 'message' => 'Format file tidak valid.']);
+        }
+
+        $slug = Str::slug($json['name']);
+
+        $exists = Lab::where('slug', $slug)
+            ->where(function ($q) use ($folderId) {
+                if (is_null($folderId)) {
+                    $q->whereNull('lab_group_id');
+                } else {
+                    $q->where('lab_group_id', $folderId);
+                }
+            })
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['success' => false, 'message' => 'Lab dengan nama ini sudah ada di folder ini.']);
+        }
+
+        // Buat lab
+        $lab = Lab::create([
+            'name' => $json['name'],
+            'slug' => $slug,
+            'author' => $json['author'],
+            'description' => $json['description'] ?? null,
+            'lab_group_id' => $folderId,
+        ]);
+
+        // Simpan ke tabel topologi
+        Topology::create([
+            'lab_id' => $lab->id,
+            'nodes' => json_encode($json['nodes'] ?? []),
+            'connections' => json_encode($json['connections'] ?? []),
+            'power' => $json['power'] ?? null,
+            'description' => $json['description'] ?? null,
+            'is_autosaved' => 0,
+        ]);
+
+        // Simpan file JSON
+        $folderPath = ($lab->lab_group_id && $lab->group)
+            ? 'labs/' . $lab->group->fullSlugPath()
+            : 'labs';
+
+        Storage::makeDirectory($folderPath);
+        $jsonPath = $folderPath . '/' . $slug . '.json';
+        Storage::put($jsonPath, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return response()->json(['success' => true, 'lab_id' => $lab->id]);
     }
 }
