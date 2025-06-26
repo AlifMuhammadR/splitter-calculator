@@ -1,139 +1,151 @@
-        body,
-        html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow-x: hidden;
-        }
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow-x: hidden;
+}
 
-        .cable-option {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+/* Cable Option Styles */
+.cable-option {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 
-        .cable-option:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
+.cable-option:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
 
-        .cable-option.selected {
-            border: 2px solid #3b82f6;
-        }
+.cable-option.selected {
+    border: 2px solid #3b82f6;
+}
 
-        #sidebar {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            width: 260px;
-            overflow-y: auto;
-            background-color: #10b981;
-            color: #f1f5f9;
-            padding: 1rem;
-            transition: transform 0.3s ease;
-            z-index: 1030;
-        }
+/* Sidebar Styles */
+#sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 260px;
+    overflow-y: auto;
+    background-color: #10b981;
+    color: #f1f5f9;
+    padding: 1rem;
+    transition: transform 0.3s ease;
+    z-index: 1030;
+}
 
-        .sidebar-hidden {
-            transform: translateX(-230px);
-        }
+.sidebar-hidden {
+    transform: translateX(-230px);
+}
 
-        #sidebar:hover {
-            transform: translateX(0);
-        }
+#sidebar:hover {
+    transform: translateX(0);
+}
 
-        #sidebar::before {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 30px;
-            height: 100vh;
-            z-index: 1029;
-        }
+#sidebar::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 30px;
+    height: 100vh;
+    z-index: 1029;
+}
 
-        #sidebar h5 {
-            font-size: 16px;
-            font-weight: 600;
-            color: #e2e8f0;
-            margin-bottom: 1rem;
-        }
+#sidebar h5 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 1rem;
+}
 
-        #sidebar .form-label,
-        #sidebar label {
-            color: #cbd5e1;
-            font-size: 13px;
-        }
+#sidebar .form-label,
+#sidebar label {
+    color: #cbd5e1;
+    font-size: 13px;
+}
 
-        #sidebar input[type="number"],
-        #sidebar select {
-            background-color: #ffffff;
-            border: none;
-            color: rgb(0, 0, 0);
-            font-size: 13px;
-            padding: 6px 10px;
-            border-radius: 6px;
-        }
+#sidebar input[type="number"],
+#sidebar select {
+    background-color: #ffffff;
+    border: none;
+    color: rgb(0, 0, 0);
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
 
-        #sidebar .btn {
-            font-size: 13px;
-            padding: 8px 12px;
-            border-radius: 0.5rem;
-            font-weight: 600;
-        }
+#sidebar .btn {
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 0.5rem;
+    font-weight: 600;
+}
 
-        #sidebar .btn:hover {
-            opacity: 0.92;
-            transform: scale(1.02);
-            transition: 0.2s ease-in-out;
-        }
+#sidebar .btn:hover {
+    opacity: 0.92;
+    transform: scale(1.02);
+    transition: 0.2s ease-in-out;
+}
 
-        .divider {
-            border-bottom: 1px solid #334155;
-            margin: 1.5rem 0;
-        }
+/* Divider Style */
+.divider {
+    border-bottom: 1px solid #334155;
+    margin: 1.5rem 0;
+}
 
-        #map-canvas {
-            position: absolute;
-            top: 0;
-            left: 30px;
-            right: 0;
-            bottom: 0;
-            background-color: #f4faff;
-            z-index: 0;
-        }
+/* Map Canvas Style */
+#map-canvas {
+    position: absolute;
+    top: 0;
+    left: 30px;
+    right: 0;
+    bottom: 0;
+    background-color: #f4faff;
+    z-index: 0;
+}
 
-        #status-table-box {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 300px;
-            z-index: 1040;
-        }
+/* Status Table and Info Card Styles */
+#status-table-box {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    z-index: 1040;
+}
 
-        #info-card {
-            position: fixed;
-            top: 240px;
-            right: 20px;
-            width: 300px;
-            z-index: 1050;
-        }
+#info-card {
+    position: fixed;
+    top: 240px;
+    right: 20px;
+    width: 300px;
+    z-index: 1050;
+}
 
-        @media (max-height: 700px) {
-            #info-card {
-                top: 200px;
-            }
+/* Media Queries for Responsive Layout */
+@media (max-height: 700px) {
+    #info-card {
+        top: 200px;
+    }
 
-            #status-table-box {
-                top: 10px;
-            }
-        }
+    #status-table-box {
+        top: 10px;
+    }
+}
 
-        @media (max-width: 768px) {
-            #info-card,
-            #status-table-box {
-                position: static;
-                width: 100%;
-                margin-bottom: 10px;
-            }
-        }
+@media (max-width: 768px) {
+    #info-card,
+    #status-table-box {
+        position: static;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+/* Node Delete Button Style */
+.btn-delete-node:hover {
+    background-color: #dc3545;
+    color: white;
+}

@@ -16,7 +16,9 @@
             <div class="divider my-3"></div>
             <div class="mb-2">
                 <h5 class="fw-bold text-dark">Input Power OLT</h5>
-                <input type="number" id="input-power" class="form-control form-control-sm mb-2" value="7">
+                <input type="number" id="input-power" class="form-control form-control-sm mb-2" oninput="updateOLTPower()"
+                    value="7">
+                <!-- <input type="number" id="inputPowerOLT" value="0"> -->
             </div>
             <div class="mb-2">
                 <h5 class="fw-bold text-dark">Splicing</h5>
@@ -111,13 +113,22 @@
         </div>
     </div>
     <!-- Canvas Full Area -->
-    <div id="map-canvas" data-lab-id="{{ $lab['id'] }}" style="position: relative; height: 100vh; ">
+    <div id="map-canvas" data-lab-id="{{ $lab['id'] }}"
+        style="position: relative; height: 100vh; background: #f8fafc;">
     </div>
 
-    {{-- <!-- Jadi style baru: -->
-<div id="map-canvas" data-lab-id="{{ $lab['id'] }}"
-     style="position: relative; height: 100vh; overflow: hidden; border: 2px dashed #ccc;">
-</div> --}}
+    <style>
+        .myLabel {
+            background: white !important;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            padding: 2px 4px;
+            color: #d70000 !important;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 1px 1px 4px #ececec;
+        }
+    </style>
 
     <!-- Informasi Loss Panel -->
     <div id="info-card" class="card shadow-sm border border-info d-none"
@@ -224,16 +235,16 @@
             Swal.fire({
                 title: '🛠 Edit Informasi Lab',
                 html: `
-        <div class="text-start mb-2"><label class="form-label fw-bold">Lab Name</label>
-            <input id="lab-name" class="form-control" value="{{ $lab['name'] }}">
-        </div>
-        <div class="text-start mb-2"><label class="form-label fw-bold">Author</label>
-            <input id="lab-author" class="form-control" value="{{ $lab['author'] }}">
-        </div>
-        <div class="text-start mb-2"><label class="form-label fw-bold">Description</label>
-            <textarea id="lab-description" class="form-control" rows="3">{{ $lab['description'] }}</textarea>
-        </div>
-    `,
+                    <div class="text-start mb-2"><label class="form-label fw-bold">Lab Name</label>
+                        <input id="lab-name" class="form-control" value="{{ $lab['name'] }}">
+                    </div>
+                    <div class="text-start mb-2"><label class="form-label fw-bold">Author</label>
+                        <input id="lab-author" class="form-control" value="{{ $lab['author'] }}">
+                    </div>
+                    <div class="text-start mb-2"><label class="form-label fw-bold">Description</label>
+                        <textarea id="lab-description" class="form-control" rows="3">{{ $lab['description'] }}</textarea>
+                    </div>
+                `,
                 width: 600,
                 confirmButtonText: '💾 Save Changes',
                 confirmButtonColor: '#10BC69',
@@ -284,519 +295,193 @@
 @endsection
 {{-- Script untuk membuat dan mengedit canvas --}}
 @push('scripts')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leader-line/1.0.7/leader-line.min.js"></script>
+    <!-- Ganti LeaderLine dengan jsPlumb -->
+    <script src="https://unpkg.com/jsplumb/dist/js/jsplumb.min.js"></script>
     <script>
-        let nodes = [],
-            lines = [],
-            nodeId = 0,
-            selectedNode = null,
-            pendingSplitter = false;
-
+        let nodeId = 0;
+        let selectedNode = null;
+        let pendingSplitter = false;
         let selectedCableLoss = 0.2 / 1000;
         let selectedCableColor = 'black';
         let selectedCableName = 'Dropcore';
         let actions = [];
-        let connections = [];
+        let isTopologyChanged = false;
 
+        let nodes = []; // {id, type, loss, power, top, left}
+        let lines = []; // {from, to, cable, loss, length, conn(jsPlumb)}
 
-        function selectCable(lossPerKM, type, el) {
-            selectedCableLoss = parseFloat(lossPerKM) / 1000;
-            selectedCableColor = type === 'patchcord' ? 'yellow' : 'black';
-            selectedCableName = type.charAt(0).toUpperCase() + type.slice(1);
-            document.querySelectorAll('.cable-option').forEach(opt => opt.classList.remove('selected'));
-            el.classList.add('selected');
-        }
+        jsPlumb.ready(function() {
+            jsPlumb.setContainer("map-canvas");
 
-        function makeDraggable(el) {
-            let isDragging = false,
-                offsetX, offsetY;
-            el.addEventListener('mousedown', function(e) {
-                isDragging = true;
-                offsetX = e.offsetX;
-                offsetY = e.offsetY;
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            });
+            // Helper: robust ambil type node
+            function getNodeType(node) {
+                return node.dataset.type || (node.querySelector('strong') ? node.querySelector('strong').innerText :
+                    '') || '';
+            }
 
-            function onMouseMove(e) {
-                if (!isDragging) return;
-                const canvas = document.getElementById('map-canvas');
-                const canvasRect = canvas.getBoundingClientRect();
+            // ADD NODE BARU
+            window.addNode = function(type) {
+                if (type === 'Splitter') {
+                    pendingSplitter = true;
+                    new bootstrap.Modal(document.getElementById('splitterModal')).show();
+                    return;
+                }
+                let el = document.createElement("div");
+                el.classList.add("position-absolute", "p-2", "bg-white", "border", "rounded", "text-center");
+                el.setAttribute("id", `node-${nodeId}`);
 
-                // Hitung posisi baru
-                let newLeft = e.clientX - canvasRect.left - offsetX;
-                let newTop = e.clientY - canvasRect.top - offsetY;
+                const canvas = document.getElementById("map-canvas");
+                const centerX = canvas.clientWidth / 2;
+                const centerY = canvas.clientHeight / 2;
+                el.style.left = `${centerX - 50}px`;
+                el.style.top = `${centerY - 25}px`;
 
-                // AMANKAN: Batas kiri, atas, kanan, bawah
-                const maxLeft = canvas.clientWidth - el.offsetWidth;
-                const maxTop = canvas.clientHeight - el.offsetHeight;
+                let label = type;
+                let loss = 0;
+                let power = "";
 
-                if (newLeft < 0) newLeft = 0;
-                if (newTop < 0) newTop = 0;
-                if (newLeft > maxLeft) newLeft = maxLeft;
-                if (newTop > maxTop) newTop = maxTop;
+                if (type.startsWith('Splitter')) {
+                    const splitRatio = type.split(' ')[1];
+                    const splitLoss = {
+                        '1:2': 3.5,
+                        '1:4': 7.2,
+                        '1:8': 10.5,
+                        '1:16': 13.5,
+                        '1:32': 17.0,
+                        '1:64': 20.5
+                    };
+                    loss = splitLoss[splitRatio] || 0;
+                }
+                if (type === 'OLT') {
+                    power = document.getElementById("input-power")?.value || 0;
+                }
+                el.dataset.loss = loss;
+                el.dataset.power = power;
+                el.dataset.type = type;
 
-                // Set posisi aman
-                el.style.left = `${newLeft}px`;
-                el.style.top = `${newTop}px`;
-                el.dataset.left = el.style.left;
-                el.dataset.top = el.style.top;
+                const powerDisplay = power ? `${parseFloat(power).toFixed(2)} dB` : '';
+                el.innerHTML = `
+        <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">&times;</button>
+        <strong>${label}</strong>
+        <div class="output-power" style="font-size: 12px; color: green;">${powerDisplay}</div>
+    `;
 
-                // Update garis
-                lines.forEach(link => {
-                    if (link.from === el.id || link.to === el.id) {
-                        link.line.position();
-                    }
+                document.getElementById("map-canvas").appendChild(el);
+                jsPlumb.draggable(el, {
+                    containment: "parent"
                 });
-            }
 
-            function onMouseUp() {
-                isDragging = false;
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-
-                // Tambahkan ini:
-                LeaderLine.positionAll();
-            }
-        }
-
-        function addNode(type) {
-            if (type === 'Splitter') {
-                pendingSplitter = true;
-                new bootstrap.Modal(document.getElementById('splitterModal')).show();
-                return;
-            }
-
-            const el = document.createElement("div");
-            el.classList.add("position-absolute", "p-2", "bg-white", "border", "rounded", "text-center");
-            el.setAttribute("id", `node-${nodeId}`);
-
-            const canvas = document.getElementById("map-canvas");
-            const centerX = canvas.clientWidth / 2;
-            const centerY = canvas.clientHeight / 2;
-
-            el.style.left = `${centerX - 50}px`;
-            el.style.top = `${centerY - 25}px`;
-
-            let label = type;
-            let loss = 0;
-            let power = "";
-
-            if (type.startsWith('Splitter')) {
-                const splitRatio = type.split(' ')[1];
-                const splitLoss = {
-                    '1:2': 3.5,
-                    '1:4': 7.2,
-                    '1:8': 10.5,
-                    '1:16': 13.5,
-                    '1:32': 17.0,
-                    '1:64': 20.5,
-                };
-                loss = splitLoss[splitRatio] || 0;
-            }
-
-            if (type === 'ODP') {
-                const odpType = prompt("Masukkan jenis ODP (Mini/Besar)");
-                label = `ODP ${odpType}`;
-                el.dataset.odp = odpType;
-                loss = odpType.toLowerCase() === 'besar' ? 0.5 : 0.2;
-            }
-
-            if (type === 'OLT') {
-                power = document.getElementById("input-power")?.value || 0;
-            }
-
-            el.dataset.loss = loss;
-            el.dataset.power = power;
-
-            const powerDisplay = power ? `${parseFloat(power).toFixed(2)} dB` : '';
-            el.innerHTML =
-                `<strong>${label}</strong><div class="output-power" style="font-size: 12px; color: green;">${powerDisplay}</div>`;
-
-            // Click to connect node
-            el.addEventListener('click', function() {
-                const clickedEl = this;
-
-                if (!selectedNode) {
-                    selectedNode = clickedEl;
-                    clickedEl.classList.add('border-primary');
-                } else if (selectedNode !== clickedEl) {
+                // Tombol hapus node
+                el.querySelector('.btn-delete-node').onclick = function(e) {
+                    e.stopPropagation();
                     Swal.fire({
-                        title: 'Hubungkan Node',
-                        html: `
-                    <div class="text-start mb-2">Panjang Kabel (meter)</div>
-                    <input id="swal-length" type="number" class="swal2-input" value="${document.getElementById("cable-length")?.value || 50}">
-
-                    <div class="text-start mb-2 mt-2">Jenis Kabel</div>
-                    <select id="swal-cable" class="swal2-select">
-                        <option value="dropcore" selected>Dropcore (0.2 dB/km)</option>
-                        <option value="patchcord">Patchcord (0.3 dB/km)</option>
-                    </select>
-                `,
-                        focusConfirm: false,
-                        confirmButtonText: 'Hubungkan',
+                        title: 'Delete this node?',
+                        text: 'All connections will be deleted.',
+                        icon: 'warning',
                         showCancelButton: true,
-                        cancelButtonText: 'Batal',
-                        preConfirm: () => {
-                            const length = parseFloat(document.getElementById('swal-length').value);
-                            const type = document.getElementById('swal-cable').value;
-
-                            if (!length || length <= 0) {
-                                Swal.showValidationMessage('Panjang kabel tidak valid!');
-                                return;
-                            }
-
-                            return {
-                                length,
-                                type
-                            };
-                        }
-                    }).then(result => {
+                        confirmButtonText: 'Yes, delete!',
+                        confirmButtonColor: 'red',
+                        cancelButtonText: 'Cancel',
+                    }).then((result) => {
                         if (result.isConfirmed) {
-                            const {
-                                length,
-                                type
-                            } = result.value;
+                            // Hapus semua koneksi yang terkait
+                            lines = lines.filter(conn => {
+                                if (conn.from === el.id || conn.to === el.id) {
+                                    jsPlumb.deleteConnection(conn.conn);
+                                    return false;
+                                }
+                                return true;
+                            });
 
-                            if (type === 'dropcore') {
-                                window.selectedCableLoss = 0.2 / 1000;
-                                window.selectedCableColor = 'black';
-                                window.selectedCableName = 'Dropcore';
-                            } else if (type === 'patchcord') {
-                                window.selectedCableLoss = 0.3 / 1000;
-                                window.selectedCableColor = 'yellow';
-                                window.selectedCableName = 'Patchcord';
-                            }
+                            // Hapus node dari canvas
+                            jsPlumb.remove(el);
 
-                            connectNodeElements(selectedNode, clickedEl, length);
-                            selectedNode.classList.remove('border-primary');
-                            selectedNode = null;
+                            // Tambahkan ke log undo
+                            actions.push({
+                                type: 'delete-node',
+                                node: el
+                            });
+
+                            // ✅ Tambahkan toast notifikasi
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: 'The node has been deleted!',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                timerProgressBar: true
+                            });
                         }
                     });
-                } else {
-                    clickedEl.classList.remove('border-primary');
-                    selectedNode = null;
-                }
-            });
+                };
 
-            makeDraggable(el);
-            document.getElementById("map-canvas").appendChild(el);
-            nodeId++;
-
-            actions.push({
-                type: "add-node",
-                node: el
-            });
-            isTopologyChanged = true;
-        }
-
-
-        function addLineContextMenu(lineObj) {
-            const lineEl = lineObj.line;
-            if (!lineEl?.svg) {
-                console.warn('Line SVG belum siap saat addLineContextMenu dipanggil');
-                return;
-            }
-
-            lineEl.svg.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                if (confirm('Hapus kabel ini?')) {
-                    lineEl.remove();
-                    lines = lines.filter(l => l !== lineObj);
-                }
-            });
-        }
-
-        function confirmSplitter() {
-            const splitterType = document.getElementById('splitterTypeSelect').value;
-            bootstrap.Modal.getInstance(document.getElementById('splitterModal')).hide();
-            addNode(`Splitter ${splitterType}`);
-        }
-
-        function connectNodeElements(source, target, length) {
-            const lossCable = length * window.selectedCableLoss;
-            const lossTarget = parseFloat(target.dataset.loss || 0);
-            const totalConnectors = parseInt(document.getElementById("connectors").value || 0);
-            const totalSplicing = parseInt(document.getElementById("splicing").value || 0);
-            const connectorLoss = totalConnectors * 0.2;
-            const splicingLoss = totalSplicing * 0.1;
-            const totalLoss = lossCable + lossTarget + connectorLoss + splicingLoss;
-
-            const sourcePower = parseFloat(source.dataset.power || document.getElementById("input-power").value || 0);
-            const powerRx = sourcePower - totalLoss;
-            target.dataset.power = powerRx.toFixed(2);
-            target.querySelector(".output-power").innerText = `${powerRx.toFixed(2)} dB`;
-
-            const line = new LeaderLine(
-                LeaderLine.pointAnchor(source, {
-                    x: '50%',
-                    y: '50%'
-                }),
-                LeaderLine.pointAnchor(target, {
-                    x: '50%',
-                    y: '50%'
-                }), {
-                    color: window.selectedCableColor,
-                    size: 2,
-                    path: 'straight',
-                    startPlug: 'none',
-                    endPlug: 'none',
-                    dash: {
-                        animation: true
-                    },
-                    middleLabel: LeaderLine.pathLabel(`-${lossCable.toFixed(2)} dB`, {
-                        color: 'red',
-                        fontSize: '12px'
-                    }),
-                    // startLabel: window.selectedCableName
-                }
-            );
-
-            lines.push({
-                from: source.id,
-                to: target.id,
-                cable: window.selectedCableName,
-                loss: lossCable, // ⬅️ SIMPAN loss kabel di sini!
-                length: length,
-                line
-            });
-
-            // Update info panel
-            document.getElementById("info-card").classList.remove("d-none");
-            document.getElementById("total-loss").innerText = totalLoss.toFixed(2);
-            document.getElementById("power-rx").innerText = powerRx.toFixed(2);
-            document.getElementById("jalur-text").innerText =
-                `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
-
-            addLineContextMenu({
-                from: source.id,
-                to: target.id,
-                cable: window.selectedCableName,
-                line
-            });
-
-            actions.push({
-                type: 'add-connection',
-                line: line,
-                from: source.id,
-                to: target.id
-            });
-            isTopologyChanged = true;
-        }
-
-
-        function undoAction() {
-            if (actions.length === 0) return;
-
-            const last = actions.pop();
-
-            if (last.type === "add-connection") {
-                const lineIndex = lines.findIndex(l => l.line === last.line);
-                if (lineIndex !== -1) {
-                    lines[lineIndex].line.remove();
-                    lines.splice(lineIndex, 1);
-                }
-            }
-
-            if (last.type === "add-node") {
-                const node = last.node;
-                lines = lines.filter(conn => {
-                    if (conn.from === node.id || conn.to === node.id) {
-                        conn.line.remove();
-                        return false;
+                // --- NODE-TO-NODE CLICK ---
+                el.onclick = function(e) {
+                    if (e.target.classList.contains("jsplumb-endpoint")) return;
+                    if (e.target.classList.contains("btn-delete-node"))
+                        return; // biar klik tombol hapus tidak trigger connect
+                    if (!selectedNode) {
+                        selectedNode = el;
+                        el.classList.add('border-primary');
+                    } else if (selectedNode !== el) {
+                        // ... (popup koneksi node)
+                    } else {
+                        el.classList.remove('border-primary');
+                        selectedNode = null;
                     }
-                    return true;
-                });
-                node.remove();
-            }
+                };
 
-            if (last.type === 'reset') {
-                // Bersihkan sebelum kembalikan node/kabel
-                document.getElementById("map-canvas").innerHTML = '';
-                lines.forEach(link => link.line.remove());
-                lines = [];
-
-                last.nodes.forEach(addNodeFromDB);
-                last.connections.forEach(drawConnectionFromDB);
-                calculateAllLoss();
-            }
-
-            document.getElementById("info-card").classList.add("d-none");
-            isTopologyChanged = true;
-        }
-
-
-        function resetMap() {
-            actions.push({
-                type: 'reset',
-                nodes: Array.from(document.querySelectorAll("#map-canvas > div")).map(el => ({
-                    id: el.id,
-                    type: el.querySelector('strong')?.innerText || '',
-                    loss: parseFloat(el.dataset.loss || 0),
-                    power: parseFloat(el.dataset.power || 0),
-                    top: el.style.top,
-                    left: el.style.left
-                })),
-                connections: lines.map(link => ({
-                    from: link.from,
-                    to: link.to,
-                    cable: link.cable,
-                    loss: link.loss,
-                    length: link.length
-                }))
-            });
-            // ⛔️ Ini yang kurang sebelumnya:
-            lines.forEach(link => link.line.remove());
-            lines = [];
-
-            // Hapus semua node dari canvas
-            const canvas = document.getElementById("map-canvas");
-            canvas.innerHTML = '';
-
-            // Reset variabel
-            nodeId = 0;
-            selectedNode = null;
-            // actions = [];
-            connections = [];
-
-            // Sembunyikan info panel
-            document.getElementById("info-card").classList.add("d-none");
-        }
-
-        function resetTopology() {
-            Swal.fire({
-                title: 'Are you sure you want to reset?',
-                text: 'All nodes and connections will be deleted!',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, reset!',
-                confirmButtonColor: 'red',
-                cancelButtonText: 'Cancel',
-            }).then((result) => {
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2500,
-                    timerProgressBar: true,
-                });
-
-                if (result.isConfirmed) {
-                    actions.push({
-                        type: 'reset',
-                        nodes: Array.from(document.querySelectorAll("#map-canvas > div")).map(el => ({
-                            id: el.id,
-                            type: el.querySelector('strong')?.innerText || '',
-                            loss: parseFloat(el.dataset.loss || 0),
-                            power: parseFloat(el.dataset.power || 0),
-                            top: el.style.top,
-                            left: el.style.left
-                        })),
-                        connections: lines.map(link => ({
-                            from: link.from,
-                            to: link.to,
-                            cable: link.cable,
-                            loss: link.loss,
-                            length: link.length
-                        }))
-                    });
-                    // ⛔️ Ini yang kurang sebelumnya:
-                    lines.forEach(link => link.line.remove());
-                    lines = [];
-
-                    // Hapus semua node dari canvas
-                    const canvas = document.getElementById("map-canvas");
-                    canvas.innerHTML = '';
-
-                    // Reset variabel
-                    nodeId = 0;
-                    selectedNode = null;
-                    // actions = [];
-                    connections = [];
-
-                    // Sembunyikan info panel
-                    document.getElementById("info-card").classList.add("d-none");
-                    isTopologyChanged = true;
-                    Toast.fire({
-                        icon: 'success',
-                        title: 'Topologi berhasil direset!'
-                    });
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    Toast.fire({
-                        icon: 'info',
-                        title: 'Reset dibatalkan'
+                // ENDPOINTS (sesuaikan splitter)
+                let endpointCount = 1;
+                let anchors = ["Top", "Right", "Bottom", "Left"];
+                if (type.startsWith('Splitter')) {
+                    let split = type.split(' ')[1];
+                    let nPorts = parseInt(split.split(':')[1]) || 4;
+                    endpointCount = nPorts;
+                    anchors = [];
+                    for (let i = 0; i < nPorts; i++) {
+                        anchors.push([(i + 1) / (nPorts + 1), 1, 0, 1]);
+                    }
+                }
+                for (let i = 0; i < endpointCount; i++) {
+                    jsPlumb.addEndpoint(el, {
+                        anchor: anchors[i % anchors.length],
+                        isSource: true,
+                        isTarget: true,
+                        maxConnections: -1,
+                        endpoint: "Blank",
+                        paintStyle: {
+                            fill: "#3e46"
+                        },
+                        connector: ["Flowchart", {
+                            cornerRadius: 2,
+                            stub: 30
+                        }]
                     });
                 }
-            });
-        }
 
-        const labId = "{{ $lab['id'] }}";
-
-        function updateLossInfo(loss, rx, jalur) {
-            document.getElementById('total-loss').textContent = loss.toFixed(2);
-            document.getElementById('power-rx').textContent = rx.toFixed(2);
-            document.getElementById('jalur-text').textContent = jalur.join(" → ");
-            document.getElementById('info-card').classList.remove("d-none");
-            document.getElementById('info-panel').classList.remove("d-none");
-
-            const status = document.getElementById('loss-status');
-            if (loss <= 28) {
-                status.innerHTML = `<span class="badge bg-success">✅ Aman digunakan</span>`;
-            } else {
-                status.innerHTML = `<span class="badge bg-danger">⚠️ Loss terlalu tinggi!</span>`;
-            }
-        }
-
-        function loadTopology(id) {
-            fetch(`/topologi/load/${id}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (!data.nodes || !data.connections) return;
-
-                    // Clear canvas dulu
-                    resetMap();
-
-                    // Tambahkan node dari data DB
-                    data.nodes.forEach(node => {
-                        addNodeFromDB(node); // fungsi ini perlu kamu buat
-                    });
-
-                    // Tambahkan koneksi dari DB
-                    data.connections.forEach(conn => {
-                        drawConnectionFromDB(conn); // fungsi ini juga perlu kamu sesuaikan
-                    });
-
-                    // Update Power dan total loss
-                    document.getElementById('input-power').value = data.power || 0;
-                    calculateAllLoss(); // fungsi ini sesuai punyamu
+                nodeId++;
+                actions.push({
+                    type: "add-node",
+                    node: el
                 });
-        }
+                isTopologyChanged = true;
+            };
 
-        function addNodeFromDB(node) {
-            const el = document.createElement("div");
-            el.classList.add("position-absolute", "p-2", "bg-white", "border", "rounded", "text-center");
-            el.setAttribute("id", node.id);
-            el.style.top = node.top;
-            el.style.left = node.left;
+            window.confirmSplitter = function() {
+                const splitterType = document.getElementById('splitterTypeSelect').value;
+                bootstrap.Modal.getInstance(document.getElementById('splitterModal')).hide();
+                addNode(`Splitter ${splitterType}`);
+            };
 
-            el.innerHTML =
-                `<strong>${node.type}</strong><div class="output-power" style="font-size: 12px; color: green;">${node.power.toFixed(2)} dB</div>`;
-            el.dataset.loss = node.loss;
-            el.dataset.power = node.power;
-
-            el.addEventListener('click', function() {
-                const clickedEl = this;
-
-                if (!selectedNode) {
-                    selectedNode = clickedEl;
-                    clickedEl.classList.add('border-primary');
-                } else if (selectedNode !== clickedEl) {
+            jsPlumb.bind("beforeDrop", function(info) {
+                return new Promise((resolve) => {
                     Swal.fire({
-                        title: 'Hubungkan Node',
+                        title: 'Pilih Jenis Kabel',
                         html: `
                     <div class="text-start mb-2">Panjang Kabel (meter)</div>
                     <input id="swal-length" type="number" class="swal2-input" value="50">
-
                     <div class="text-start mb-2 mt-2">Jenis Kabel</div>
                     <select id="swal-cable" class="swal2-select">
                         <option value="dropcore" selected>Dropcore (0.2 dB/km)</option>
@@ -808,14 +493,14 @@
                         showCancelButton: true,
                         cancelButtonText: 'Batal',
                         preConfirm: () => {
-                            const length = parseFloat(document.getElementById('swal-length').value);
+                            const length = parseFloat(document.getElementById(
+                                'swal-length').value);
                             const type = document.getElementById('swal-cable').value;
-
                             if (!length || length <= 0) {
-                                Swal.showValidationMessage('Panjang kabel tidak valid!');
+                                Swal.showValidationMessage(
+                                    'Panjang kabel tidak valid!');
                                 return;
                             }
-
                             return {
                                 length,
                                 type
@@ -827,7 +512,6 @@
                                 length,
                                 type
                             } = result.value;
-
                             if (type === 'dropcore') {
                                 selectedCableLoss = 0.2 / 1000;
                                 selectedCableColor = 'black';
@@ -837,303 +521,606 @@
                                 selectedCableColor = 'yellow';
                                 selectedCableName = 'Patchcord';
                             }
-
-                            connectNodeElements(selectedNode, clickedEl, length);
-                            selectedNode.classList.remove('border-primary');
-                            selectedNode = null;
+                            info.connection._customMeta = {
+                                length,
+                                type,
+                                color: selectedCableColor,
+                                name: selectedCableName,
+                                loss: length * selectedCableLoss
+                            };
+                            resolve(true);
+                        } else {
+                            resolve(false);
                         }
                     });
-                } else {
-                    clickedEl.classList.remove('border-primary');
-                    selectedNode = null;
-                }
-            });
-
-            makeDraggable(el);
-            document.getElementById("map-canvas").appendChild(el);
-            isTopologyChanged = true;
-
-        }
-
-        function drawConnectionFromDB(conn) {
-            const fromEl = document.getElementById(conn.from);
-            const toEl = document.getElementById(conn.to);
-
-            if (!fromEl || !toEl) return;
-
-            const line = new LeaderLine(
-                LeaderLine.pointAnchor(fromEl, {
-                    x: '50%',
-                    y: '50%'
-                }),
-                LeaderLine.pointAnchor(toEl, {
-                    x: '50%',
-                    y: '50%'
-                }), {
-                    color: conn.cable === 'Dropcore' ? 'black' : 'yellow',
-                    size: 2,
-                    path: 'straight',
-                    startPlug: 'none',
-                    endPlug: 'none',
-                    dash: {
-                        animation: true
-                    },
-                    middleLabel: LeaderLine.pathLabel(`-${(conn.loss || 0).toFixed(2)} dB`, {
-                        color: 'red',
-                        fontSize: '12px'
-                    })
-                    // startLabel: conn.cable
-                }
-            );
-
-            lines.push({
-                from: fromEl.id,
-                to: toEl.id,
-                cable: conn.cable,
-                loss: conn.loss,
-                length: conn.length,
-                line
-            });
-
-            addLineContextMenu({
-                from: conn.from,
-                to: conn.to,
-                cable: conn.cable,
-                line
-            });
-            isTopologyChanged = true;
-        }
-
-        function calculateAllLoss() {
-            lines.forEach(conn => {
-                const from = document.getElementById(conn.from);
-                const to = document.getElementById(conn.to);
-
-                const loss = parseFloat(conn.loss || 0);
-                const sourcePower = parseFloat(from.dataset.power || document.getElementById("input-power").value ||
-                    0);
-                const powerRx = sourcePower - loss;
-
-                to.dataset.power = powerRx.toFixed(2);
-                to.querySelector(".output-power").innerText = `${powerRx.toFixed(2)} dB`;
-            });
-        }
-
-        async function saveTopology(topology, labId) {
-            const {
-                nodes,
-                connections
-            } = topology;
-
-            const Toast = Swal.mixin({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2500,
-                timerProgressBar: true,
-            });
-
-            if (nodes.length === 0 || connections.length === 0) {
-                Toast.fire({
-                    icon: 'warning',
-                    title: 'There are no nodes or connections to save!'
                 });
-                return;
-            }
+            });
 
+            jsPlumb.bind("connection", function(info) {
+                let conn = info.connection;
+                let meta = conn._customMeta || {};
+                let lossCable = meta.loss || 0;
+                let color = meta.color || "black";
 
-            const power = parseFloat(document.getElementById('input-power').value || 0);
-
-            try {
-                const response = await fetch(`/topologi/save/${labId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
-                            'content')
-                    },
-                    body: JSON.stringify({
-                        name: "{{ $lab['name'] ?? '' }}",
-                        author: "{{ $lab['author'] ?? '' }}",
-                        description: "{{ $lab['description'] ?? '' }}",
-                        nodes,
-                        connections,
-                        power,
-                    })
+                conn.setPaintStyle({
+                    stroke: color,
+                    strokeWidth: 2,
+                    dashstyle: meta.name === "Patchcord" ? "4 2" : undefined
+                });
+                conn.connector.setOptions({
+                    type: "Flowchart",
+                    cornerRadius: 2,
+                    stub: 30
                 });
 
-                const data = await response.json();
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Gagal', 'Happened an error.', 'error');
-            }
-            isTopologyChanged = false;
-        }
+                conn.removeAllOverlays();
+                conn.addOverlay([
+                    "Label", {
+                        label: `-${lossCable.toFixed(2)} dB`,
+                        location: 0.5,
+                        cssClass: "myLabel",
+                        css: {
+                            color: "red",
+                            fontSize: "13px",
+                            fontWeight: "bold",
+                            background: "white",
+                            padding: "2px 4px",
+                            borderRadius: "4px",
+                            border: "1px solid #ddd"
+                        }
+                    }
+                ]);
+                conn.addOverlay([
+                    "Arrow", {
+                        width: 12,
+                        length: 12,
+                        location: 1,
+                        foldback: 0.7,
+                        paintStyle: {
+                            fill: color
+                        }
+                    }
+                ]);
 
-        function gatherAndSaveTopology() {
-            const topology = {
-                nodes: [],
-                connections: [],
-                power: parseFloat(document.getElementById('input-power')?.value || 0),
-                name: "{{ $lab['name'] ?? '' }}",
-                author: "{{ $lab['author'] ?? '' }}",
-                description: "{{ $lab['description'] ?? '' }}"
+                let source = conn.source;
+                let target = conn.target;
+                lines.push({
+                    from: source.id,
+                    to: target.id,
+                    cable: meta.name || selectedCableName,
+                    loss: lossCable,
+                    length: meta.length || 0,
+                    conn: conn
+                });
+
+                document.getElementById("info-card").classList.remove("d-none");
+                document.getElementById("total-loss").innerText = lossCable.toFixed(2);
+                let fromPower = parseFloat(source.dataset.power || document.getElementById("input-power")
+                    .value || 0);
+                let powerRx = fromPower - lossCable;
+                if (target.querySelector(".output-power")) target.querySelector(".output-power").innerText =
+                    `${powerRx.toFixed(2)} dB`;
+                document.getElementById("power-rx").innerText = powerRx.toFixed(2);
+                document.getElementById("jalur-text").innerText =
+                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
+
+                conn.bind("contextmenu", function(conn, e) {
+                    e.preventDefault();
+                    if (confirm('Hapus kabel ini?')) {
+                        jsPlumb.deleteConnection(conn);
+                        lines = lines.filter(l => l.conn !== conn);
+                    }
+                });
+            });
+
+            function connectNodeElements(source, target, length) {
+                const lossCable = length * selectedCableLoss;
+                const lossTarget = parseFloat(target.dataset.loss || 0);
+                const totalConnectors = parseInt(document.getElementById("connectors").value || 0);
+                const totalSplicing = parseInt(document.getElementById("splicing").value || 0);
+                const connectorLoss = totalConnectors * 0.2;
+                const splicingLoss = totalSplicing * 0.1;
+                const totalLoss = lossCable + lossTarget + connectorLoss + splicingLoss;
+                const sourcePower = parseFloat(source.dataset.power || document.getElementById("input-power")
+                    .value || 0);
+                const powerRx = sourcePower - totalLoss;
+                target.dataset.power = powerRx.toFixed(2);
+                if (target.querySelector(".output-power")) target.querySelector(".output-power").innerText =
+                    `${powerRx.toFixed(2)} dB`;
+
+                let paint = {
+                    stroke: selectedCableColor,
+                    strokeWidth: 2
+                };
+                if (selectedCableName === "Patchcord") paint.dashstyle = "4 2";
+
+                const conn = jsPlumb.connect({
+                    source: source,
+                    target: target,
+                    anchors: ["AutoDefault", "AutoDefault"],
+                    endpoint: "Blank",
+                    connector: ["Flowchart", {
+                        cornerRadius: 2,
+                        stub: 30
+                    }],
+                    paintStyle: paint,
+                    overlays: [
+                        [
+                            "Label", {
+                                label: `-${lossCable.toFixed(2)} dB`,
+                                location: 0.5,
+                                cssClass: "myLabel",
+                                css: {
+                                    color: "red",
+                                    fontSize: "13px",
+                                    fontWeight: "bold",
+                                    background: "white",
+                                    padding: "2px 4px",
+                                    borderRadius: "4px",
+                                    border: "1px solid #ddd"
+                                }
+                            }
+                        ],
+                        [
+                            "Arrow", {
+                                width: 12,
+                                length: 12,
+                                location: 1,
+                                foldback: 0.7,
+                                paintStyle: {
+                                    fill: selectedCableColor
+                                }
+                            }
+                        ]
+                    ]
+                });
+
+                conn.bind("contextmenu", function(conn, e) {
+                    e.preventDefault();
+                    if (confirm('Hapus kabel ini?')) {
+                        jsPlumb.deleteConnection(conn);
+                        lines = lines.filter(l => l.conn !== conn);
+                    }
+                });
+
+                lines.push({
+                    from: source.id,
+                    to: target.id,
+                    cable: selectedCableName,
+                    loss: lossCable,
+                    length: length,
+                    conn
+                });
+
+                document.getElementById("info-card").classList.remove("d-none");
+                document.getElementById("total-loss").innerText = totalLoss.toFixed(2);
+                document.getElementById("power-rx").innerText = powerRx.toFixed(2);
+                document.getElementById("jalur-text").innerText =
+                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
+                actions.push({
+                    type: 'add-connection',
+                    conn: conn,
+                    from: source.id,
+                    to: target.id
+                });
+                isTopologyChanged = true;
+            }
+
+            window.undoAction = function() {
+                if (actions.length === 0) return;
+                const last = actions.pop();
+                if (last.type === "add-connection") {
+                    const lineIndex = lines.findIndex(l => l.conn === last.conn);
+                    if (lineIndex !== -1) {
+                        jsPlumb.deleteConnection(lines[lineIndex].conn);
+                        lines.splice(lineIndex, 1);
+                    }
+                }
+                if (last.type === "add-node") {
+                    const node = last.node;
+                    lines = lines.filter(conn => {
+                        if (conn.from === node.id || conn.to === node.id) {
+                            jsPlumb.deleteConnection(conn.conn);
+                            return false;
+                        }
+                        return true;
+                    });
+                    jsPlumb.remove(node);
+                }
+                document.getElementById("info-card").classList.add("d-none");
+                isTopologyChanged = true;
             };
 
-            const nodeElements = Array.from(document.querySelectorAll("#map-canvas > div"));
-
-            nodeElements.forEach(node => {
-                topology.nodes.push({
-                    id: node.id,
-                    type: node.querySelector('strong')?.innerText || '',
-                    loss: parseFloat(node.dataset.loss || 0),
-                    power: parseFloat(node.dataset.power || 0),
-                    top: node.style.top,
-                    left: node.style.left
+            window.resetMap = function() {
+                actions.push({
+                    type: 'reset',
+                    nodes: Array.from(document.querySelectorAll("#map-canvas > div")).map(el => ({
+                        id: el.id,
+                        type: getNodeType(el),
+                        loss: parseFloat(el.dataset.loss || 0),
+                        power: parseFloat(el.dataset.power || 0),
+                        top: el.style.top,
+                        left: el.style.left
+                    })),
+                    connections: lines.map(link => ({
+                        from: link.from,
+                        to: link.to,
+                        cable: link.cable,
+                        loss: link.loss,
+                        length: link.length
+                    }))
                 });
-            });
+                lines.forEach(link => jsPlumb.deleteConnection(link.conn));
+                lines = [];
+                const canvas = document.getElementById("map-canvas");
+                canvas.innerHTML = '';
+                nodeId = 0;
+                selectedNode = null;
+                isTopologyChanged = true;
+                document.getElementById("info-card").classList.add("d-none");
+            };
 
-            lines.forEach(conn => {
-                topology.connections.push({
-                    from: conn.from,
-                    to: conn.to,
-                    cable: conn.cable,
-                    color: conn.line?.options?.color || 'black',
-                    loss: conn.loss,
-                    length: conn.length
-                });
-            });
-
-            const labId = document.getElementById('map-canvas').dataset.labId;
-
-            // ⛔ Skip semuanya kalau kosong
-            if (topology.nodes.length === 0 || topology.connections.length === 0) {
-                saveTopology(topology, labId); // tetap panggil ini karena dia yang munculin warning Swal
-                return;
-            }
-
-            // ✅ Simpan ke database
-            saveTopology(topology, labId);
-
-            // ✅ Simpan ke file local.json di server
-            fetch(`/lab/${labId}/update-json`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify(topology)
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
+            window.resetTopology = function() {
+                Swal.fire({
+                    title: 'Are you sure you want to reset?',
+                    text: 'All nodes and connections will be deleted!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, reset!',
+                    confirmButtonColor: 'red',
+                    cancelButtonText: 'Cancel',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        resetMap();
                         Swal.fire({
                             toast: true,
                             position: 'top-end',
                             icon: 'success',
-                            title: 'The topology is saved into a lab file!',
+                            title: 'The topology has been reset!',
                             showConfirmButton: false,
                             timer: 1500
                         });
+                    }
+                });
+            };
+
+            // ADD NODE DARI DB/IMPORT/LOAD
+            window.addNodeFromDB = function(node) {
+                if (!node.type) node.type = 'Client';
+                let el = document.createElement("div");
+                el.classList.add("position-absolute", "p-2", "bg-white", "border", "rounded", "text-center");
+                el.setAttribute("id", node.id);
+                el.style.top = node.top;
+                el.style.left = node.left;
+                el.dataset.loss = node.loss;
+                el.dataset.power = node.power;
+                el.dataset.type = node.type;
+
+                el.innerHTML = `
+        <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">&times;</button>
+        <strong>${node.type}</strong>
+        <div class="output-power" style="font-size: 12px; color: green;">${parseFloat(node.power).toFixed(2)} dB</div>
+    `;
+
+                document.getElementById("map-canvas").appendChild(el);
+                jsPlumb.draggable(el, {
+                    containment: "parent"
+                });
+
+                // Tombol hapus node
+                el.querySelector('.btn-delete-node').onclick = function(e) {
+                    e.stopPropagation();
+                    Swal.fire({
+                        title: 'Hapus node ini?',
+                        text: 'Semua kabel yang terhubung ke node juga akan dihapus.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, hapus!',
+                        confirmButtonColor: 'red',
+                        cancelButtonText: 'Batal',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            lines = lines.filter(conn => {
+                                if (conn.from === el.id || conn.to === el.id) {
+                                    jsPlumb.deleteConnection(conn.conn);
+                                    return false;
+                                }
+                                return true;
+                            });
+                            jsPlumb.remove(el);
+                            actions.push({
+                                type: 'delete-node',
+                                node: el
+                            });
+                        }
+                    });
+                };
+
+                // --- NODE-TO-NODE CLICK ---
+                el.onclick = function(e) {
+                    if (e.target.classList.contains("jsplumb-endpoint")) return;
+                    if (e.target.classList.contains("btn-delete-node")) return;
+                    if (!selectedNode) {
+                        selectedNode = el;
+                        el.classList.add('border-primary');
+                    } else if (selectedNode !== el) {
+                        // ... (popup koneksi node)
                     } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Failed to save lab file',
-                            text: 'Please try again in a moment.'
-                        });
+                        el.classList.remove('border-primary');
+                        selectedNode = null;
                     }
-                })
-        }
+                };
 
-
-        function exportTopology() {
-            const topology = {
-                nodes: [],
-                connections: [],
-                power: parseFloat(document.getElementById('input-power').value || 0),
-                name: "{{ $lab['name'] }}",
-                author: "{{ $lab['author'] }}",
-                description: "{{ $lab['description'] }}"
-            };
-
-            document.querySelectorAll("#map-canvas > div").forEach(node => {
-                topology.nodes.push({
-                    id: node.id,
-                    type: node.querySelector('strong')?.innerText || '',
-                    loss: parseFloat(node.dataset.loss || 0),
-                    power: parseFloat(node.dataset.power || 0),
-                    top: node.style.top,
-                    left: node.style.left
-                });
-            });
-
-            lines.forEach(conn => {
-                topology.connections.push({
-                    from: conn.from,
-                    to: conn.to,
-                    cable: conn.cable,
-                    color: conn.line?.options?.color || 'black',
-                    loss: conn.loss,
-                    length: conn.length
-                });
-            });
-
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(topology, null, 2));
-            const dlAnchor = document.createElement('a');
-            dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", `topologi-${topology.name.replace(/\s+/g, '_')}.json`);
-            document.body.appendChild(dlAnchor);
-            dlAnchor.click();
-            dlAnchor.remove();
-            isTopologyChanged = false;
-        }
-
-        function importTopology(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    resetMap();
-
-                    if (data.nodes) {
-                        data.nodes.forEach(addNodeFromDB);
+                // ENDPOINTS
+                let endpointCount = 4;
+                let anchors = ["Top", "Right", "Bottom", "Left"];
+                if (node.type.startsWith('Splitter')) {
+                    let split = node.type.split(' ')[1];
+                    let nPorts = parseInt(split.split(':')[1]) || 4;
+                    endpointCount = nPorts;
+                    anchors = [];
+                    for (let i = 0; i < nPorts; i++) {
+                        anchors.push([(i + 1) / (nPorts + 1), 1, 0, 1]);
                     }
-
-                    if (data.connections) {
-                        data.connections.forEach(drawConnectionFromDB);
-                    }
-
-                    if (data.power !== undefined) {
-                        document.getElementById('input-power').value = data.power;
-                    }
-
-                    calculateAllLoss();
-
-                    Swal.fire('Berhasil', 'Topologi berhasil dimuat dari file!', 'success');
-                } catch (err) {
-                    console.error(err);
-                    Swal.fire('Gagal', 'Format file tidak valid!', 'error');
                 }
+                for (let i = 0; i < endpointCount; i++) {
+                    jsPlumb.addEndpoint(el, {
+                        anchor: anchors[i % anchors.length],
+                        isSource: true,
+                        isTarget: true,
+                        maxConnections: -1,
+                        endpoint: ["Dot", {
+                            radius: 8
+                        }],
+                        paintStyle: {
+                            fill: "#3e4651"
+                        },
+                        connector: ["Flowchart", {
+                            cornerRadius: 2,
+                            stub: 30
+                        }]
+                    });
+                }
+                isTopologyChanged = true;
             };
-            reader.readAsText(file);
-        }
 
+            window.drawConnectionFromDB = function(conn) {
+                const fromEl = document.getElementById(conn.from);
+                const toEl = document.getElementById(conn.to);
+                if (!fromEl || !toEl) return;
+                const color = conn.cable === 'Dropcore' ? 'black' : 'yellow';
+                const jsConn = jsPlumb.connect({
+                    source: fromEl,
+                    target: toEl,
+                    anchors: ["AutoDefault", "AutoDefault"],
+                    endpoint: "Blank",
+                    connector: ["Flowchart", {
+                        cornerRadius: 2,
+                        stub: 30
+                    }],
+                    paintStyle: {
+                        stroke: color,
+                        strokeWidth: 2,
+                        dashstyle: conn.cable === "Patchcord" ? "4 2" : undefined
+                    },
+                    overlays: [
+                        [
+                            "Label", {
+                                label: `-${(conn.loss || 0).toFixed(2)} dB`,
+                                location: 0.5,
+                                cssClass: "myLabel",
+                                css: {
+                                    color: "red",
+                                    fontSize: "12px"
+                                }
+                            }
+                        ]
+                    ]
+                });
+                jsConn.bind("contextmenu", function(conn, e) {
+                    e.preventDefault();
+                    if (confirm('Hapus kabel ini?')) {
+                        jsPlumb.deleteConnection(conn);
+                        lines = lines.filter(l => l.conn !== conn);
+                    }
+                });
+                lines.push({
+                    from: fromEl.id,
+                    to: toEl.id,
+                    cable: conn.cable,
+                    loss: conn.loss,
+                    length: conn.length,
+                    conn: jsConn
+                });
+                isTopologyChanged = true;
+            };
 
-        window.onload = function() {
-            const labId = "{{ $lab['id'] }}";
-            loadTopology(labId);
-        };
+            window.calculateAllLoss = function() {
+                lines.forEach(conn => {
+                    const from = document.getElementById(conn.from);
+                    const to = document.getElementById(conn.to);
+                    const loss = parseFloat(conn.loss || 0);
+                    const sourcePower = parseFloat(from.dataset.power || document.getElementById(
+                        "input-power").value || 0);
+                    const powerRx = sourcePower - loss;
+                    if (to.querySelector(".output-power")) to.querySelector(".output-power").innerText =
+                        `${powerRx.toFixed(2)} dB`;
+                });
+            };
 
-        window.onbeforeunload = function() {
-            if (isTopologyChanged) {
-                return "Perubahan Anda belum disimpan. Yakin ingin keluar?";
+            window.loadTopology = function(id) {
+                fetch(`/topologi/load/${id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.nodes || !data.connections) return;
+                        resetMap();
+                        data.nodes.filter(n => n && n.id && n.type)
+                            .forEach(node => {
+                                node.type = node.type || 'Client';
+                                addNodeFromDB(node);
+                            });
+                        data.connections.forEach(drawConnectionFromDB);
+                        document.getElementById('input-power').value = data.power || 0;
+                        calculateAllLoss();
+                    });
+            };
+
+            window.exportTopology = function() {
+                const topology = {
+                    nodes: [],
+                    connections: [],
+                    power: parseFloat(document.getElementById('input-power').value || 0),
+                    name: "{{ $lab['name'] }}",
+                    author: "{{ $lab['author'] }}",
+                    description: "{{ $lab['description'] }}"
+                };
+                document.querySelectorAll("#map-canvas > div").forEach(node => {
+                    if (!node.id || !getNodeType(node)) return;
+                    topology.nodes.push({
+                        id: node.id,
+                        type: getNodeType(node),
+                        loss: parseFloat(node.dataset.loss || 0),
+                        power: parseFloat(node.dataset.power || 0),
+                        top: node.style.top,
+                        left: node.style.left
+                    });
+                });
+                lines.forEach(conn => {
+                    topology.connections.push({
+                        from: conn.from,
+                        to: conn.to,
+                        cable: conn.cable,
+                        loss: conn.loss,
+                        length: conn.length
+                    });
+                });
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(topology,
+                    null, 2));
+                const dlAnchor = document.createElement('a');
+                dlAnchor.setAttribute("href", dataStr);
+                dlAnchor.setAttribute("download", `topologi-${topology.name.replace(/\s+/g, '_')}.json`);
+                document.body.appendChild(dlAnchor);
+                dlAnchor.click();
+                dlAnchor.remove();
+                isTopologyChanged = false;
+            };
+
+            window.gatherAndSaveTopology = function() {
+                const topology = {
+                    nodes: [],
+                    connections: [],
+                    power: parseFloat(document.getElementById('input-power')?.value || 0),
+                    name: "{{ $lab['name'] ?? '' }}",
+                    author: "{{ $lab['author'] ?? '' }}",
+                    description: "{{ $lab['description'] ?? '' }}"
+                };
+                document.querySelectorAll("#map-canvas > div").forEach(node => {
+                    if (!node.id || !getNodeType(node)) return;
+                    topology.nodes.push({
+                        id: node.id,
+                        type: getNodeType(node),
+                        loss: parseFloat(node.dataset.loss || 0),
+                        power: parseFloat(node.dataset.power || 0),
+                        top: node.style.top,
+                        left: node.style.left
+                    });
+                });
+                lines.forEach(conn => {
+                    topology.connections.push({
+                        from: conn.from,
+                        to: conn.to,
+                        cable: conn.cable,
+                        loss: conn.loss,
+                        length: conn.length
+                    });
+                });
+                const labId = document.getElementById('map-canvas').dataset.labId;
+                if (topology.nodes.length === 0 || topology.connections.length === 0) {
+                    saveTopology(topology, labId);
+                    return;
+                }
+                saveTopology(topology, labId);
+                fetch(`/lab/${labId}/update-json`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify(topology)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: 'The topology is saved into a lab file!',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Failed to save lab file',
+                                text: 'Please try again in a moment.'
+                            });
+                        }
+                    })
+            };
+
+            async function saveTopology(topology, labId) {
+                const {
+                    nodes,
+                    connections
+                } = topology;
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2500,
+                    timerProgressBar: true,
+                });
+                if (nodes.length === 0 || connections.length === 0) {
+                    Toast.fire({
+                        icon: 'warning',
+                        title: 'There are no nodes or connections to save!'
+                    });
+                    return;
+                }
+                const power = parseFloat(document.getElementById('input-power').value || 0);
+                try {
+                    await fetch(`/topologi/save/${labId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            name: "{{ $lab['name'] ?? '' }}",
+                            author: "{{ $lab['author'] ?? '' }}",
+                            description: "{{ $lab['description'] ?? '' }}",
+                            nodes,
+                            connections,
+                            power,
+                        })
+                    });
+                } catch (error) {
+                    console.error(error);
+                    Swal.fire('Gagal', 'Happened an error.', 'error');
+                }
+                isTopologyChanged = false;
             }
-        };
 
-        document.getElementById('map-canvas').addEventListener('scroll', LeaderLine.positionAll);
-        // Biar kabel gak geser saat scroll atau resize
-        window.addEventListener('scroll', LeaderLine.positionAll);
-        window.addEventListener('resize', LeaderLine.positionAll);
+            window.onload = function() {
+                const labId = "{{ $lab['id'] }}";
+                loadTopology(labId);
+            };
+            window.onbeforeunload = function() {
+                if (isTopologyChanged) return "Perubahan Anda belum disimpan. Yakin ingin keluar?";
+            };
+        });
     </script>
 @endpush

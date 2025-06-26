@@ -41,7 +41,8 @@ Route::get('/lab-group/{id}/check-contents', [LabGroupController::class, 'checkC
 Route::post('/lab/{id}/update-json', [LabController::class, 'updateJson']);
 Route::delete('/lab-group/{id}', [LabGroupController::class, 'destroy']);
 Route::get('/lab/folder/{id}', [LabController::class, 'ajaxFolder']);
-
+Route::get('/lab/{id}/json', [LabController::class, 'getJsonExport']);
+Route::post('/lab/import', [LabController::class, 'importLab']);
 //
 
 // Gabungan RESTORE
@@ -51,6 +52,5 @@ Route::delete('/delete-only-db/{type}/{id}', [RestoreController::class, 'deleteO
 
 
 //
-
 Route::post('/topologi/save/{id}', [TopologyController::class, 'save']);
 Route::get('/topologi/load/{id}', [TopologyController::class, 'load']);
