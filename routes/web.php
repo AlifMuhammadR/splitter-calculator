@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 
 // Redirect root to home page
 Route::get('/', function () {
-    return redirect()->route('home.index');
+    return redirect()->route('home');
 });
 
 // Resource routes for Home, Lab, and LabGroup
