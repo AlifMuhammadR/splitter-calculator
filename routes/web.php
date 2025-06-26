@@ -38,21 +38,6 @@ Route::prefix('lab')->group(function () {
     Route::post('/import', [LabController::class, 'importLab']);
 });
 
-<<<<<<< HEAD
-Route::get('/lab/folder/{id?}', [LabController::class, 'ajaxFolder']);
-Route::get('/lab/preview/{id}', [LabController::class, 'getJsonPreview']);
-Route::post('/lab-group/{id}/rename', [LabGroupController::class, 'rename']);
-Route::get('/lab/{lab}/topologi', [LabController::class, 'topologi'])->name('lab.canvas');
-Route::get('/lab-group/{id}/check-contents', [LabGroupController::class, 'checkContents']);
-Route::post('/lab/{id}/update-json', [LabController::class, 'updateJson']);
-Route::delete('/lab-group/{id}', [LabGroupController::class, 'destroy']);
-Route::get('/lab/folder/{id}', [LabController::class, 'ajaxFolder']);
-Route::get('/lab/{id}/json', [LabController::class, 'getJsonExport']);
-Route::post('/lab/import', [LabController::class, 'importLab']);
-//
-
-// Gabungan RESTORE
-=======
 // LabGroup specific routes
 Route::prefix('lab-group')->group(function () {
     Route::post('/{id}/rename', [LabGroupController::class, 'rename']);
@@ -61,19 +46,11 @@ Route::prefix('lab-group')->group(function () {
 });
 
 // Restore and Delete (DB Only) routes
->>>>>>> c5b88f64b83a58d59a52d914602b49eae9113466
 Route::post('/restore/{type}/{id}', [RestoreController::class, 'restore']);
 Route::delete('/delete-only-db/{type}/{id}', [RestoreController::class, 'deleteOnlyDb']);
 
-<<<<<<< HEAD
-
-//
-Route::post('/topologi/save/{id}', [TopologyController::class, 'save']);
-Route::get('/topologi/load/{id}', [TopologyController::class, 'load']);
-=======
 // Topology routes
 Route::prefix('topologi')->group(function () {
     Route::post('/save/{id}', [TopologyController::class, 'save']);
     Route::get('/load/{id}', [TopologyController::class, 'load']);
 });
->>>>>>> c5b88f64b83a58d59a52d914602b49eae9113466
