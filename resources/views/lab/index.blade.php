@@ -240,31 +240,31 @@
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-folder-fill text-warning me-2"></i>
                                     <span class="item-name">${folder.name}</span>
-${isMissing ? `
-                <span class="badge bg-danger ms-2">Missing</span>
-                <i class="bi bi-info-circle-fill text-secondary ms-1" data-bs-toggle="tooltip" title="This folder is missing from the file system but still exists in the database."></i>
-            ` : ''}
+                                    ${isMissing ? `
+                                            <span class="badge bg-danger ms-2">Missing</span>
+                                            <i class="bi bi-info-circle-fill text-secondary ms-1" data-bs-toggle="tooltip" title="This folder is missing from the file system but still exists in the database."></i>
+                                        ` : ''}
                                 </div>
                                 <div class="item-actions">
                                     ${isMissing
                                         ? `
-                                                                            <a href="#" onclick="event.stopPropagation(); restoreFolder(${folder.id})" data-bs-toggle="tooltip" title="Restore Folder" class="text-success me-2">
-                                                                                <i class="bi bi-arrow-clockwise"></i>
-                                                                            </a>
-                                                                            <a href="#" onclick="event.stopPropagation(); deleteFolderOnlyDb(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Delete from DB" class="text-danger">
-                                                                                <i class="bi bi-x-circle-fill"></i>
-                                                                            </a>`
+                                                <a href="#" onclick="event.stopPropagation(); restoreFolder(${folder.id})" data-bs-toggle="tooltip" title="Restore Folder" class="text-success me-2">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </a>
+                                                <a href="#" onclick="event.stopPropagation(); deleteFolderOnlyDb(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Delete from DB" class="text-danger">
+                                                    <i class="bi bi-x-circle-fill"></i>
+                                                </a>`
                                         : `
-                                                                            <a href="#" onclick="event.stopPropagation(); showRenamePrompt(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Rename Folder" class="text-primary me-2">
-                                                                                <i class="bi bi-pencil-square"></i>
-                                                                            </a>
-                                                                            <a href="#" onclick="event.stopPropagation(); confirmDeleteFolder(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Delete Folder" class="text-danger">
-                                                                                <i class="bi bi-trash-fill"></i>
-                                                                            </a>
-                                                                            <form id="form-delete-folder-${folder.id}" action="/lab-group/${folder.id}" method="POST" class="d-none">
-                                                                                @csrf
-                                                                                @method('DELETE')
-                                                                            </form>`
+                                                <a href="#" onclick="event.stopPropagation(); showRenamePrompt(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Rename Folder" class="text-primary me-2">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </a>
+                                                <a href="#" onclick="event.stopPropagation(); confirmDeleteFolder(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Delete Folder" class="text-danger">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </a>
+                                                <form id="form-delete-folder-${folder.id}" action="/lab-group/${folder.id}" method="POST" class="d-none">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                </form>`
                                     }
                                 </div>
                             </li>
@@ -281,34 +281,34 @@ ${isMissing ? `
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-file-earmark-fill me-2" style="color: #10BC69"></i>
                                     <span class="item-name">${lab.name}</span>
-${isMissing ? `
-            <span class="badge bg-danger ms-2">Missing</span>
-            <i class="bi bi-info-circle-fill text-secondary ms-1" data-bs-toggle="tooltip" title="This lab file is not found on the server, but its data still exists in the database."></i>
-        ` : ''}
+                                    ${isMissing ? `
+                                            <span class="badge bg-danger ms-2">Missing</span>
+                                            <i class="bi bi-info-circle-fill text-secondary ms-1" data-bs-toggle="tooltip" title="This lab file is not found on the server, but its data still exists in the database."></i>
+                                        ` : ''}
                                 </div>
                                 <div class="item-actions">
                                     ${isMissing
                                         ? `
-                                                                            <a href="#" onclick="event.preventDefault(); event.stopPropagation(); restoreLab(${lab.id})" data-bs-toggle="tooltip" title="Restore Lab" class="text-success me-2">
-                                                                                <i class="bi bi-arrow-clockwise"></i>
-                                                                            </a>
-                                                                            <a href="#" onclick="event.preventDefault(); event.stopPropagation(); deleteLabOnlyDb(${lab.id}, '${lab.name}')" data-bs-toggle="tooltip" title="Delete from DB" class="text-danger">
-                                                                                <i class="bi bi-x-circle-fill"></i>
-                                                                            </a>`
+                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); restoreLab(${lab.id})" data-bs-toggle="tooltip" title="Restore Lab" class="text-success me-2">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </a>
+                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); deleteLabOnlyDb(${lab.id}, '${lab.name}')" data-bs-toggle="tooltip" title="Delete from DB" class="text-danger">
+                                                    <i class="bi bi-x-circle-fill"></i>
+                                                </a>`
                                         : `
-                                                                            <a href="#" onclick="event.preventDefault(); event.stopPropagation(); exportLab(${lab.id})" class="text-info me-2" data-bs-toggle="tooltip" title="Export Lab">
-                                                                                <i class="bi bi-download"></i>
-                                                                            </a>
-                                                                            <a href="/lab/${lab.id}/topologi" class="text-success me-2" onclick="event.stopPropagation()" data-bs-toggle="tooltip" title="Edit Lab">
-                                                                                <i class="bi bi-pencil-square"></i>
-                                                                            </a>
-                                                                            <a href="#" class="text-danger" onclick="event.preventDefault(); event.stopPropagation(); confirmDelete(${lab.id}, '${lab.name}')" data-bs-toggle="tooltip" title="Delete Lab">
-                                                                                <i class="bi bi-trash-fill"></i>
-                                                                            </a>
-                                                                            <form id="form-delete-${lab.id}" action="/lab/${lab.id}" method="POST" class="d-none">
-                                                                                @csrf
-                                                                                @method('DELETE')
-                                                                            </form>`
+                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); exportLab(${lab.id})" class="text-info me-2" data-bs-toggle="tooltip" title="Export Lab">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                                <a href="/lab/${lab.id}/topologi" class="text-success me-2" onclick="event.stopPropagation()" data-bs-toggle="tooltip" title="Edit Lab">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </a>
+                                                <a href="#" class="text-danger" onclick="event.preventDefault(); event.stopPropagation(); confirmDelete(${lab.id}, '${lab.name}')" data-bs-toggle="tooltip" title="Delete Lab">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </a>
+                                                <form id="form-delete-${lab.id}" action="/lab/${lab.id}" method="POST" class="d-none">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                </form>`
                                     }
                                 </div>
                             </li>
