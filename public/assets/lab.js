@@ -214,7 +214,7 @@ function confirmDeleteFolder(folderId, folderName) {
             }
 
             const warningHtml = warnings.length > 0 ?
-                `<br><small class="text-danger">${warnings.join(' dan ')} akan ikut terhapus!</small>` :
+                `<br><small class="text-danger">${warnings.join(' and ')} will be deleted!</small>` :
                 '';
 
             Swal.fire({
