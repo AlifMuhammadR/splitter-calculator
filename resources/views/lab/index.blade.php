@@ -202,11 +202,11 @@
             // Show loading state
             labList.innerHTML = `<li class="list-group-item text-center text-muted">
                                     <i class="bi bi-hourglass-split"></i> Loading...
-                                   </li>`;
+                                 </li>`;
             previewPanel.innerHTML = `<div class="d-flex flex-column align-items-center justify-content-center text-muted h-100" style="animation: float 2s ease-in-out infinite;" data-aos="fade-up">
                                         <i class="bi bi-box-seam" style="font-size: 2.5rem;"></i>
                                         <p class="mt-2">No preview available</p>
-                                    </div>`;
+                                      </div>`;
 
             fetch(url)
                 .then(res => res.json())
@@ -240,31 +240,31 @@
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-folder-fill text-warning me-2"></i>
                                     <span class="item-name">${folder.name}</span>
-                                    ${isMissing ? `
-                                            <span class="badge bg-danger ms-2">Missing</span>
-                                            <i class="bi bi-info-circle-fill text-secondary ms-1" data-bs-toggle="tooltip" title="This folder is missing from the file system but still exists in the database."></i>
-                                        ` : ''}
+${isMissing ? `
+                    <span class="badge bg-danger ms-2">Missing</span>
+                    <i class="bi bi-info-circle-fill text-secondary ms-1" data-bs-toggle="tooltip" title="This folder is missing from the file system but still exists in the database."></i>
+                ` : ''}
                                 </div>
                                 <div class="item-actions">
                                     ${isMissing
                                         ? `
-                                                <a href="#" onclick="event.stopPropagation(); restoreFolder(${folder.id})" data-bs-toggle="tooltip" title="Restore Folder" class="text-success me-2">
-                                                    <i class="bi bi-arrow-clockwise"></i>
-                                                </a>
-                                                <a href="#" onclick="event.stopPropagation(); deleteFolderOnlyDb(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Delete from DB" class="text-danger">
-                                                    <i class="bi bi-x-circle-fill"></i>
-                                                </a>`
+                                                                                <a href="#" onclick="event.stopPropagation(); restoreFolder(${folder.id})" data-bs-toggle="tooltip" title="Restore Folder" class="text-success me-2">
+                                                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                                                </a>
+                                                                                <a href="#" onclick="event.stopPropagation(); deleteFolderOnlyDb(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Delete from DB" class="text-danger">
+                                                                                    <i class="bi bi-x-circle-fill"></i>
+                                                                                </a>`
                                         : `
-                                                <a href="#" onclick="event.stopPropagation(); showRenamePrompt(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Rename Folder" class="text-primary me-2">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </a>
-                                                <a href="#" onclick="event.stopPropagation(); confirmDeleteFolder(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Delete Folder" class="text-danger">
-                                                    <i class="bi bi-trash-fill"></i>
-                                                </a>
-                                                <form id="form-delete-folder-${folder.id}" action="/lab-group/${folder.id}" method="POST" class="d-none">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                </form>`
+                                                                                <a href="#" onclick="event.stopPropagation(); showRenamePrompt(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Rename Folder" class="text-primary me-2">
+                                                                                    <i class="bi bi-pencil-square"></i>
+                                                                                </a>
+                                                                                <a href="#" onclick="event.stopPropagation(); confirmDeleteFolder(${folder.id}, '${folder.name}')" data-bs-toggle="tooltip" title="Delete Folder" class="text-danger">
+                                                                                    <i class="bi bi-trash-fill"></i>
+                                                                                </a>
+                                                                                <form id="form-delete-folder-${folder.id}" action="/lab-group/${folder.id}" method="POST" class="d-none">
+                                                                                    @csrf
+                                                                                    @method('DELETE')
+                                                                                </form>`
                                     }
                                 </div>
                             </li>
@@ -281,34 +281,34 @@
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-file-earmark-fill me-2" style="color: #10BC69"></i>
                                     <span class="item-name">${lab.name}</span>
-                                    ${isMissing ? `
-                                            <span class="badge bg-danger ms-2">Missing</span>
-                                            <i class="bi bi-info-circle-fill text-secondary ms-1" data-bs-toggle="tooltip" title="This lab file is not found on the server, but its data still exists in the database."></i>
-                                        ` : ''}
+${isMissing ? `
+                <span class="badge bg-danger ms-2">Missing</span>
+                <i class="bi bi-info-circle-fill text-secondary ms-1" data-bs-toggle="tooltip" title="This lab file is not found on the server, but its data still exists in the database."></i>
+            ` : ''}
                                 </div>
                                 <div class="item-actions">
                                     ${isMissing
                                         ? `
-                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); restoreLab(${lab.id})" data-bs-toggle="tooltip" title="Restore Lab" class="text-success me-2">
-                                                    <i class="bi bi-arrow-clockwise"></i>
-                                                </a>
-                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); deleteLabOnlyDb(${lab.id}, '${lab.name}')" data-bs-toggle="tooltip" title="Delete from DB" class="text-danger">
-                                                    <i class="bi bi-x-circle-fill"></i>
-                                                </a>`
+                                                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); restoreLab(${lab.id})" data-bs-toggle="tooltip" title="Restore Lab" class="text-success me-2">
+                                                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                                                </a>
+                                                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); deleteLabOnlyDb(${lab.id}, '${lab.name}')" data-bs-toggle="tooltip" title="Delete from DB" class="text-danger">
+                                                                                    <i class="bi bi-x-circle-fill"></i>
+                                                                                </a>`
                                         : `
-                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); exportLab(${lab.id})" class="text-info me-2" data-bs-toggle="tooltip" title="Export Lab">
-                                                    <i class="bi bi-download"></i>
-                                                </a>
-                                                <a href="/lab/${lab.id}/topologi" class="text-success me-2" onclick="event.stopPropagation()" data-bs-toggle="tooltip" title="Edit Lab">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </a>
-                                                <a href="#" class="text-danger" onclick="event.preventDefault(); event.stopPropagation(); confirmDelete(${lab.id}, '${lab.name}')" data-bs-toggle="tooltip" title="Delete Lab">
-                                                    <i class="bi bi-trash-fill"></i>
-                                                </a>
-                                                <form id="form-delete-${lab.id}" action="/lab/${lab.id}" method="POST" class="d-none">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                </form>`
+                                                                                <a href="#" onclick="event.preventDefault(); event.stopPropagation(); exportLab(${lab.id})" class="text-info me-2" data-bs-toggle="tooltip" title="Export Lab">
+                                                                                    <i class="bi bi-download"></i>
+                                                                                </a>
+                                                                                <a href="/lab/${lab.id}/topologi" class="text-success me-2" onclick="event.stopPropagation()" data-bs-toggle="tooltip" title="Edit Lab">
+                                                                                    <i class="bi bi-pencil-square"></i>
+                                                                                </a>
+                                                                                <a href="#" class="text-danger" onclick="event.preventDefault(); event.stopPropagation(); confirmDelete(${lab.id}, '${lab.name}')" data-bs-toggle="tooltip" title="Delete Lab">
+                                                                                    <i class="bi bi-trash-fill"></i>
+                                                                                </a>
+                                                                                <form id="form-delete-${lab.id}" action="/lab/${lab.id}" method="POST" class="d-none">
+                                                                                    @csrf
+                                                                                    @method('DELETE')
+                                                                                </form>`
                                     }
                                 </div>
                             </li>
@@ -334,8 +334,8 @@
                 .catch(error => {
                     console.error('Error loading folder data:', error);
                     labList.innerHTML = `<li class="list-group-item text-center text-danger">
-                                                <i class="bi bi-exclamation-triangle"></i> Failed to load data.
-                                            </li>`;
+                                            <i class="bi bi-exclamation-triangle"></i> Failed to load data.
+                                         </li>`;
                 });
         }
 
@@ -368,202 +368,6 @@
         function openFolderCreate() {
             // Logic for opening new folder creation modal/page
             console.log('Open New Folder Create');
-        }
-
-        function previewLab(labId) {
-            // Logic to fetch and display lab preview
-            console.log('Previewing Lab:', labId);
-            const previewPanel = document.getElementById('preview-panel');
-            previewPanel.innerHTML = `
-                <div class="d-flex flex-column align-items-center justify-content-center text-muted h-100">
-                    <i class="bi bi-eye" style="font-size: 2.5rem;"></i>
-                    <p class="mt-2">Loading Lab Preview for ID: ${labId}...</p>
-                </div>
-            `;
-            // Example fetch for preview content
-            fetch(`/lab/${labId}/preview`)
-                .then(response => response.text())
-                .then(html => {
-                    previewPanel.innerHTML = html;
-                    // You might need to update the author here as well
-                    const labAuthorElement = document.getElementById('lab-author');
-                    if (labAuthorElement) {
-                        // This part needs the author data from the preview endpoint
-                        // For now, it's a placeholder
-                        labAuthorElement.textContent = 'Author: [Loading...]';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading lab preview:', error);
-                    previewPanel.innerHTML = `
-                        <div class="d-flex flex-column align-items-center justify-content-center text-danger h-100">
-                            <i class="bi bi-exclamation-triangle" style="font-size: 2.5rem;"></i>
-                            <p class="mt-2">Failed to load preview.</p>
-                        </div>
-                    `;
-                });
-        }
-
-        function restoreFolder(folderId) {
-            // Logic to restore folder
-            console.log('Restore Folder:', folderId);
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'Do you want to restore this folder?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#dc3545',
-                confirmButtonText: 'Yes, restore it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Implement restore logic, e.g., AJAX call
-                    Swal.fire('Restored!', 'Your folder has been restored.', 'success');
-                    loadFolder(document.getElementById('currentFolderId').value || 0, document.getElementById(
-                        'searchInput').value.trim());
-                }
-            });
-        }
-
-        function deleteFolderOnlyDb(folderId, folderName) {
-            // Logic to delete folder only from DB
-            console.log('Delete Folder (DB Only):', folderId, folderName);
-            Swal.fire({
-                title: 'Are you sure?',
-                text: `You are about to delete folder "${folderName}" from the database ONLY. This cannot be undone!`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Implement AJAX call to delete from DB only
-                    Swal.fire('Deleted!', 'Folder deleted from database.', 'success');
-                    loadFolder(document.getElementById('currentFolderId').value || 0, document.getElementById(
-                        'searchInput').value.trim());
-                }
-            });
-        }
-
-        function showRenamePrompt(folderId, folderName) {
-            // Logic to show rename prompt
-            console.log('Rename Folder Prompt:', folderId, folderName);
-            Swal.fire({
-                title: 'Rename Folder',
-                input: 'text',
-                inputValue: folderName,
-                showCancelButton: true,
-                confirmButtonText: 'Rename',
-                inputValidator: (value) => {
-                    if (!value) {
-                        return 'Folder name cannot be empty!';
-                    }
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Implement rename logic, e.g., AJAX call
-                    Swal.fire('Renamed!', `Folder renamed to "${result.value}".`, 'success');
-                    loadFolder(document.getElementById('currentFolderId').value || 0, document.getElementById(
-                        'searchInput').value.trim());
-                }
-            });
-        }
-
-        function confirmDeleteFolder(folderId, folderName) {
-            // Logic to confirm and delete folder
-            console.log('Confirm Delete Folder:', folderId, folderName);
-            Swal.fire({
-                title: 'Are you sure?',
-                text: `You are about to delete folder "${folderName}" and all its contents. This action cannot be undone!`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById(`form-delete-folder-${folderId}`).submit();
-                }
-            });
-        }
-
-        function exportLab(labId) {
-            // Logic to export lab
-            console.log('Exporting Lab:', labId);
-            Swal.fire({
-                title: 'Exporting Lab',
-                text: 'Preparing your lab for export...',
-                timer: 2000,
-                timerProgressBar: true,
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            }).then(() => {
-                // In a real app, this would trigger a download or API call
-                Swal.fire('Export Complete!', 'Your lab has been exported.', 'success');
-            });
-        }
-
-        function restoreLab(labId) {
-            // Logic to restore lab
-            console.log('Restore Lab:', labId);
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'Do you want to restore this lab?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#dc3545',
-                confirmButtonText: 'Yes, restore it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Implement restore logic, e.g., AJAX call
-                    Swal.fire('Restored!', 'Your lab has been restored.', 'success');
-                    loadFolder(document.getElementById('currentFolderId').value || 0, document.getElementById(
-                        'searchInput').value.trim());
-                }
-            });
-        }
-
-        function deleteLabOnlyDb(labId, labName) {
-            // Logic to delete lab only from DB
-            console.log('Delete Lab (DB Only):', labId, labName);
-            Swal.fire({
-                title: 'Are you sure?',
-                text: `You are about to delete lab "${labName}" from the database ONLY. This cannot be undone!`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Implement AJAX call to delete from DB only
-                    Swal.fire('Deleted!', 'Lab deleted from database.', 'success');
-                    loadFolder(document.getElementById('currentFolderId').value || 0, document.getElementById(
-                        'searchInput').value.trim());
-                }
-            });
-        }
-
-        function confirmDelete(labId, labName) {
-            // Logic to confirm and delete lab
-            console.log('Confirm Delete Lab:', labId, labName);
-            Swal.fire({
-                title: 'Are you sure?',
-                text: `You are about to delete lab "${labName}". This action cannot be undone!`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById(`form-delete-${labId}`).submit();
-                }
-            });
         }
     </script>
 @endsection

@@ -168,7 +168,7 @@ function showRenamePrompt(folderId, currentName) {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
                     body: JSON.stringify({
                         name: newName
@@ -189,15 +189,7 @@ function showRenamePrompt(folderId, currentName) {
             loadFolder(document.getElementById('currentFolderId').value);
 
             // Success toast
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Folder berhasil diubah!',
-                showConfirmButton: false,
-                timer: 2000,
-                timerProgressBar: true
-            });
+            showToast('success', 'Folder renamed successfully!');
         }
     });
 }
@@ -227,7 +219,7 @@ function confirmDeleteFolder(folderId, folderName) {
 
             Swal.fire({
                 title: 'Delete Folder?',
-                html: `Folder <strong>${folderName}</strong> akan dihapus.${warningHtml}`,
+                html: `You are about to delete lab <strong>${folderName}</strong>. This action cannot be undone!`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
@@ -283,20 +275,54 @@ function getCsrfToken() {
  * @param {string} id - The ID of the lab to restore.
  */
 function restoreLab(id) {
-    fetch(`/restore/lab/${id}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': getCsrfToken(),
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire('Restored!', 'Lab berhasil direstore.', 'success');
-                loadFolder(document.getElementById('currentFolderId').value);
-            }
-        });
+    Swal.fire({
+        title: 'Restore Lab?',
+        text: 'This lab will be restored to the system. Proceed?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-arrow-clockwise"></i> Yes, restore',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#10BC69',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/restore/lab/${id}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: '<span style="color:#6C63FF;">Restored Successfully!</span>',
+                        text: 'The lab has been restored to the system.',
+                        imageUrl: '/assets/tenor.gif',
+                        imageWidth: 100,
+                        imageHeight: 100,
+                        imageAlt: 'Success animation',
+                        width: 500,
+                        padding: '1.5em',
+                        background: '#fff url(/images/pattern-bg.png)',
+                        backdrop: `
+                            rgb(1,51,104)
+                            url("/assets/nyan-cat.gif")
+                            left top
+                            no-repeat
+                        `,
+                        showConfirmButton: true,
+                        confirmButtonText: 'OK',
+                        position: 'center'
+                    });
+                    loadFolder(document.getElementById('currentFolderId').value);
+                } else {
+                    Swal.fire('Failed', 'Failed to restore the lab.', 'error');
+                }
+            });
+        }
+    });
 }
 
 /**
@@ -304,21 +330,56 @@ function restoreLab(id) {
  * @param {string} id - The ID of the folder to restore.
  */
 function restoreFolder(id) {
-    fetch(`/restore/folder/${id}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': getCsrfToken(),
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire('Restored!', 'Folder berhasil dibuat ulang.', 'success');
-                loadFolder(document.getElementById('currentFolderId').value);
-            }
-        });
+    Swal.fire({
+        title: 'Restore Folder?',
+        text: 'This folder will be restored to the system. Proceed?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-arrow-clockwise"></i> Yes, restore',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#10BC69',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/restore/folder/${id}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: '<span style="color:#6C63FF;">Restored Successfully!</span>',
+                        text: 'The folder has been restored to the system.',
+                        imageUrl: '/assets/tenor.gif',
+                        imageWidth: 100,
+                        imageHeight: 100,
+                        imageAlt: 'Success animation',
+                        width: 500,
+                        padding: '1.5em',
+                        background: '#fff url(/images/pattern-bg.png)',
+                        backdrop: `
+                            rgb(1,51,104)
+                            url("/assets/nyan-cat.gif")
+                            left top
+                            no-repeat
+                        `,
+                        showConfirmButton: true,
+                        confirmButtonText: 'OK',
+                        position: 'center'
+                    });
+                    loadFolder(document.getElementById('currentFolderId').value);
+                } else {
+                    Swal.fire('Failed', 'Failed to restore the folder.', 'error');
+                }
+            });
+        }
+    });
 }
+
 
 /**
  * Prompts to confirm deletion of a lab from the database only (not from disk).
@@ -392,7 +453,7 @@ function exportLab(id) {
     fetch(`/lab/${id}/json`)
         .then(res => res.json())
         .then(data => {
-            const fileName = `topologi-${data.name.replace(/\s+/g, '_')}.json`;
+            const fileName = `topology-${data.name.replace(/\s+/g, '_')}.json`;
             const blob = new Blob([JSON.stringify(data, null, 2)], {
                 type: "application/json"
             });
@@ -404,12 +465,24 @@ function exportLab(id) {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+
+            // ✅ Show toast after successful export
+            Swal.fire({
+                icon: 'success',
+                title: 'Lab exported successfully!',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
         })
         .catch(err => {
             console.error(err);
-            Swal.fire('Gagal', 'Gagal melakukan export.', 'error');
+            Swal.fire('Failed', 'Failed to export the lab.', 'error');
         });
 }
+
 
 /**
  * Triggers the hidden file input for importing labs.
@@ -436,41 +509,62 @@ function handleImport(event) {
             formData.append('lab_group_id', folderId);
             formData.append('json_raw', JSON.stringify(json));
 
+            // ✅ 1. Tampilkan toast “Importing...”
             Swal.fire({
+                icon: 'info',
                 title: 'Importing...',
-                text: 'Please wait a moment.',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
             });
 
+            // ✅ 2. Lakukan proses import
             fetch('/lab/import', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: formData
-                })
-                .then(res => res.json())
-                .then(responseData => {
-                    Swal.close();
-                    if (responseData?.success) {
-                        showToast('success', 'Lab berhasil diimport!');
-                        loadFolder(folderId);
-                    } else {
-                        showToast('error', responseData?.message || 'Import gagal');
-                    }
-                })
-                .catch(err => {
-                    Swal.close();
-                    showToast('error', err.message || 'Terjadi kesalahan saat import');
-                })
-                .finally(() => {
-                    document.getElementById('importFileInput').value = ''; // reset input
-                });
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(responseData => {
+                if (responseData?.success) {
+                    // ✅ 3. Tampilkan popup GIF saat sukses
+                    Swal.fire({
+                        title: '<span style="color:#6C63FF;">Successfully Imported!</span>',
+                        text: 'Lab file has been imported into the system.',
+                        imageUrl: '/assets/tenor.gif', // ganti dengan GIF milikmu
+                        imageWidth: 100,
+                        imageHeight: 100,
+                        imageAlt: 'Success animation',
+                        width: 500,
+                        padding: '1.5em',
+                        background: '#fff url(/images/pattern-bg.png)', // opsional
+                        backdrop: `
+                            rgb(1,51,104, 0.4)
+                            url("/assets/nyan-cat.gif")
+                            left top
+                            no-repeat
+                        `,
+                        showConfirmButton: true,
+                        position: 'center'
+                    });
+
+                    loadFolder(folderId);
+                } else {
+                    showToast('error', responseData?.message || 'Import failed.');
+                }
+            })
+            .catch(err => {
+                showToast('error', err.message || 'Something went wrong during import.');
+            })
+            .finally(() => {
+                document.getElementById('importFileInput').value = ''; // reset input
+            });
         } catch (err) {
-            showToast('error', 'File tidak valid!');
+            showToast('error', 'Invalid JSON file!');
             document.getElementById('importFileInput').value = ''; // reset input
         }
     };
