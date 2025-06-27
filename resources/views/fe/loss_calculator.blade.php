@@ -100,7 +100,7 @@
                         </div>
                     </div>
 
-                    <div class="mb-4">
+                    <div class="mb-4" style="display: none">
                         <label for="connectorLoss" class="form-label">Connector Loss (dB)</label>
                         <div class="input-group">
                             <span class="input-group-text fw-bold">-</span>
