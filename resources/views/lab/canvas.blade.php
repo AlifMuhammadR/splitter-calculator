@@ -311,6 +311,14 @@
         let nodes = []; // {id, type, loss, power, top, left}
         let lines = []; // {from, to, cable, loss, length, conn(jsPlumb)}
 
+        function getColorByCableName(name) {
+        if (!name) return 'black';
+        name = name.toLowerCase();
+        if (name.includes('dropcore')) return 'black';
+        if (name.includes('patchcord')) return 'yellow';
+        return 'black';
+     }
+
         jsPlumb.ready(() => {
             jsPlumb.setContainer(mapCanvas);
 
@@ -332,22 +340,37 @@
                 }
                 return num;
             }
+            
 
             // Helper: Membuat elemen node
             function createNodeElement(nodeData) {
                 const el = document.createElement('div');
                 el.classList.add('position-absolute', 'p-2', 'bg-white', 'border', 'rounded', 'text-center');
                 el.setAttribute('id', nodeData.id || `node-${nodeId++}`);
-                el.style.left = nodeData.left || `${mapCanvas.clientWidth / 2 - 50}px`;
-                el.style.top = nodeData.top || `${mapCanvas.clientHeight / 2 - 25}px`;
-                el.dataset.loss = nodeData.loss || 0;
-                el.dataset.power = nodeData.power || 0;
-                el.dataset.type = nodeData.type || 'Client';
-                el.innerHTML = `
-            <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
-            <strong>${nodeData.type}</strong>
-            <div class="output-power" style="font-size: 12px; color: green;">${nodeData.power ? parseFloat(nodeData.power).toFixed(2) : ''} dB</div>
-        `;
+                // --- PATCH posisi ---
+                el.style.left = (typeof nodeData.left === 'number')
+    ? `${nodeData.left}px`
+    : (typeof nodeData.left === 'string' && nodeData.left.endsWith('px'))
+        ? nodeData.left
+        : (!isNaN(Number(nodeData.left)) && nodeData.left !== '' && nodeData.left !== undefined)
+            ? `${Number(nodeData.left)}px`
+            : `${mapCanvas.clientWidth / 2 - 50}px`;
+
+el.style.top = (typeof nodeData.top === 'number')
+    ? `${nodeData.top}px`
+    : (typeof nodeData.top === 'string' && nodeData.top.endsWith('px'))
+        ? nodeData.top
+        : (!isNaN(Number(nodeData.top)) && nodeData.top !== '' && nodeData.top !== undefined)
+            ? `${Number(nodeData.top)}px`
+            : `${mapCanvas.clientHeight / 2 - 25}px`;
+                            el.dataset.loss = nodeData.loss || 0;
+                            el.dataset.power = nodeData.power || 0;
+                            el.dataset.type = nodeData.type || 'Client';
+                            el.innerHTML = `
+                        <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
+                        <strong>${nodeData.type}</strong>
+                        <div class="output-power" style="font-size: 12px; color: green;">${nodeData.power ? parseFloat(nodeData.power).toFixed(2) : ''} dB</div>
+                    `;
 
                 mapCanvas.appendChild(el);
                 jsPlumb.draggable(el, {
@@ -682,29 +705,20 @@
                 console.log('🧩 source?', source);
                 console.log('🧩 target?', target);
 
-                if (!source || !target) {
-                    console.warn('❌ Gagal connect karena node belum ada:', link);
-                    return;
-                }
-                const color = getColorByCableName(link.cable); // Warna kabel
+                if (!source || !target) return;
+                const color = getColorByCableName(link.cable);
                 const lossCable = link.loss || 0;
-                const length = link.length || 0;
-
                 const paint = {
                     stroke: color,
                     strokeWidth: 2,
                     dashstyle: link.cable === 'Patchcord' ? '4 2' : undefined
                 };
-
-                const conn = jsPlumb.connect({
+                            const conn = jsPlumb.connect({
                     source,
                     target,
                     anchors: ['AutoDefault', 'AutoDefault'],
                     endpoint: 'Blank',
-                    connector: ['Flowchart', {
-                        cornerRadius: 2,
-                        stub: 30
-                    }],
+                    connector: ['Flowchart', { cornerRadius: 2, stub: 30 }],
                     paintStyle: paint,
                     overlays: [
                         ['Label', {
@@ -726,9 +740,7 @@
                             length: 12,
                             location: 1,
                             foldback: 0.7,
-                            paintStyle: {
-                                fill: selectedCableColor
-                            }
+                            paintStyle: { fill: color }
                         }]
                     ]
                 });
@@ -793,20 +805,26 @@
                 });
 
                 document.getElementById('info-card').classList.remove('d-none');
-                document.getElementById('total-loss').innerText = totalLoss.toFixed(2);
-                document.getElementById('power-rx').innerText = powerRx.toFixed(2);
-                document.getElementById('jalur-text').innerText =
-                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
-                actions.push({
-                    type: 'add-connection',
-                    conn,
-                    from: source.id,
-                    to: target.id
-                });
-                isTopologyChanged = true;
+            document.getElementById('total-loss').innerText = lossCable.toFixed(2);
 
-                console.log('Koneksi berhasil dibuat?', conn);
+            const fromPower = parseFloat(source.dataset.power || inputPower?.value || 0);
+            const powerRx = fromPower - lossCable;
+            if (target.querySelector('.output-power')) {
+                target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
             }
+            document.getElementById('power-rx').innerText = powerRx.toFixed(2);
+            document.getElementById('jalur-text').innerText =
+                `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
+                        actions.push({
+                            type: 'add-connection',
+                            conn,
+                            from: source.id,
+                            to: target.id
+                        });
+                        isTopologyChanged = true;
+
+                        console.log('Koneksi berhasil dibuat?', conn);
+                    }
 
 
             jsPlumb.bind('beforeDrop', (info) => {
