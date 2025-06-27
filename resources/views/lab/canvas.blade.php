@@ -231,34 +231,41 @@
 
     {{-- Modal untuk update name lab, author & description --}}
     <script>
+        const labData = @json($lab, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    </script>
+    <script>
         function showEditLabForm() {
             Swal.fire({
-                title: '🛠 Edit Informasi Lab',
+                title: '🛠 Edit Lab Information',
                 html: `
-                    <div class="text-start mb-2"><label class="form-label fw-bold">Lab Name</label>
-                        <input id="lab-name" class="form-control" value="{{ $lab['name'] }}">
-                    </div>
-                    <div class="text-start mb-2"><label class="form-label fw-bold">Author</label>
-                        <input id="lab-author" class="form-control" value="{{ $lab['author'] }}">
-                    </div>
-                    <div class="text-start mb-2"><label class="form-label fw-bold">Description</label>
-                        <textarea id="lab-description" class="form-control" rows="3">{{ $lab['description'] }}</textarea>
-                    </div>
-                `,
+                <div class="text-start mb-2">
+                    <label class="form-label fw-bold">Lab Name</label>
+                    <input id="lab-name" class="form-control" value="${labData.name}">
+                </div>
+                <div class="text-start mb-2">
+                    <label class="form-label fw-bold">Author</label>
+                    <input id="lab-author" class="form-control" value="${labData.author}">
+                </div>
+                <div class="text-start mb-2">
+                    <label class="form-label fw-bold">Description</label>
+                    <textarea id="lab-description" class="form-control" rows="3">${labData.description ?? ''}</textarea>
+                </div>
+            `,
                 width: 600,
                 confirmButtonText: '💾 Save Changes',
                 confirmButtonColor: '#10BC69',
-                cancelButtonText: 'Batal',
+                cancelButtonText: 'Cancel',
+                cancelButtonColor: '#d33',
                 showCancelButton: true,
                 focusConfirm: false,
                 showClass: {
-                    popup: 'animate_animated animate_fadeInDown'
+                    popup: 'animate__animated animate__fadeInDown'
                 },
                 hideClass: {
-                    popup: 'animate_animated animate_fadeOutUp'
+                    popup: 'animate__animated animate__fadeOutUp'
                 },
                 customClass: {
-                    popup: 'animate_animated animate_fadeInDown'
+                    popup: 'custom-float-alert', // nempel ke CSS kita sendiri nanti
                 },
                 didOpen: () => {
                     document.querySelector('.swal2-popup')?.classList.add('float-style');
@@ -272,7 +279,7 @@
                     const description = document.getElementById('lab-description').value.trim();
 
                     if (!name || !author) {
-                        Swal.showValidationMessage('name dan Author tidak boleh kosong!');
+                        Swal.showValidationMessage('Lab Name and Author cannot be empty!');
                         return false;
                     }
 
@@ -292,6 +299,8 @@
             });
         }
     </script>
+
+
 @endsection
 {{-- Script untuk membuat dan mengedit canvas --}}
 @push('scripts')
@@ -312,12 +321,12 @@
         let lines = []; // {from, to, cable, loss, length, conn(jsPlumb)}
 
         function getColorByCableName(name) {
-        if (!name) return 'black';
-        name = name.toLowerCase();
-        if (name.includes('dropcore')) return 'black';
-        if (name.includes('patchcord')) return 'yellow';
-        return 'black';
-     }
+            if (!name) return 'black';
+            name = name.toLowerCase();
+            if (name.includes('dropcore')) return 'black';
+            if (name.includes('patchcord')) return 'yellow';
+            return 'black';
+        }
 
         jsPlumb.ready(() => {
             jsPlumb.setContainer(mapCanvas);
@@ -340,7 +349,7 @@
                 }
                 return num;
             }
-            
+
 
             // Helper: Membuat elemen node
             function createNodeElement(nodeData) {
@@ -348,25 +357,25 @@
                 el.classList.add('position-absolute', 'p-2', 'bg-white', 'border', 'rounded', 'text-center');
                 el.setAttribute('id', nodeData.id || `node-${nodeId++}`);
                 // --- PATCH posisi ---
-                el.style.left = (typeof nodeData.left === 'number')
-    ? `${nodeData.left}px`
-    : (typeof nodeData.left === 'string' && nodeData.left.endsWith('px'))
-        ? nodeData.left
-        : (!isNaN(Number(nodeData.left)) && nodeData.left !== '' && nodeData.left !== undefined)
-            ? `${Number(nodeData.left)}px`
-            : `${mapCanvas.clientWidth / 2 - 50}px`;
+                el.style.left = (typeof nodeData.left === 'number') ?
+                    `${nodeData.left}px` :
+                    (typeof nodeData.left === 'string' && nodeData.left.endsWith('px')) ?
+                    nodeData.left :
+                    (!isNaN(Number(nodeData.left)) && nodeData.left !== '' && nodeData.left !== undefined) ?
+                    `${Number(nodeData.left)}px` :
+                    `${mapCanvas.clientWidth / 2 - 50}px`;
 
-el.style.top = (typeof nodeData.top === 'number')
-    ? `${nodeData.top}px`
-    : (typeof nodeData.top === 'string' && nodeData.top.endsWith('px'))
-        ? nodeData.top
-        : (!isNaN(Number(nodeData.top)) && nodeData.top !== '' && nodeData.top !== undefined)
-            ? `${Number(nodeData.top)}px`
-            : `${mapCanvas.clientHeight / 2 - 25}px`;
-                            el.dataset.loss = nodeData.loss || 0;
-                            el.dataset.power = nodeData.power || 0;
-                            el.dataset.type = nodeData.type || 'Client';
-                            el.innerHTML = `
+                el.style.top = (typeof nodeData.top === 'number') ?
+                    `${nodeData.top}px` :
+                    (typeof nodeData.top === 'string' && nodeData.top.endsWith('px')) ?
+                    nodeData.top :
+                    (!isNaN(Number(nodeData.top)) && nodeData.top !== '' && nodeData.top !== undefined) ?
+                    `${Number(nodeData.top)}px` :
+                    `${mapCanvas.clientHeight / 2 - 25}px`;
+                el.dataset.loss = nodeData.loss || 0;
+                el.dataset.power = nodeData.power || 0;
+                el.dataset.type = nodeData.type || 'Client';
+                el.innerHTML = `
                         <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
                         <strong>${nodeData.type}</strong>
                         <div class="output-power" style="font-size: 12px; color: green;">${nodeData.power ? parseFloat(nodeData.power).toFixed(2) : ''} dB</div>
@@ -713,12 +722,15 @@ el.style.top = (typeof nodeData.top === 'number')
                     strokeWidth: 2,
                     dashstyle: link.cable === 'Patchcord' ? '4 2' : undefined
                 };
-                            const conn = jsPlumb.connect({
+                const conn = jsPlumb.connect({
                     source,
                     target,
                     anchors: ['AutoDefault', 'AutoDefault'],
                     endpoint: 'Blank',
-                    connector: ['Flowchart', { cornerRadius: 2, stub: 30 }],
+                    connector: ['Flowchart', {
+                        cornerRadius: 2,
+                        stub: 30
+                    }],
                     paintStyle: paint,
                     overlays: [
                         ['Label', {
@@ -740,7 +752,9 @@ el.style.top = (typeof nodeData.top === 'number')
                             length: 12,
                             location: 1,
                             foldback: 0.7,
-                            paintStyle: { fill: color }
+                            paintStyle: {
+                                fill: color
+                            }
                         }]
                     ]
                 });
@@ -805,26 +819,26 @@ el.style.top = (typeof nodeData.top === 'number')
                 });
 
                 document.getElementById('info-card').classList.remove('d-none');
-            document.getElementById('total-loss').innerText = lossCable.toFixed(2);
+                document.getElementById('total-loss').innerText = lossCable.toFixed(2);
 
-            const fromPower = parseFloat(source.dataset.power || inputPower?.value || 0);
-            const powerRx = fromPower - lossCable;
-            if (target.querySelector('.output-power')) {
-                target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
+                const fromPower = parseFloat(source.dataset.power || inputPower?.value || 0);
+                const powerRx = fromPower - lossCable;
+                if (target.querySelector('.output-power')) {
+                    target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
+                }
+                document.getElementById('power-rx').innerText = powerRx.toFixed(2);
+                document.getElementById('jalur-text').innerText =
+                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
+                actions.push({
+                    type: 'add-connection',
+                    conn,
+                    from: source.id,
+                    to: target.id
+                });
+                isTopologyChanged = true;
+
+                console.log('Koneksi berhasil dibuat?', conn);
             }
-            document.getElementById('power-rx').innerText = powerRx.toFixed(2);
-            document.getElementById('jalur-text').innerText =
-                `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
-                        actions.push({
-                            type: 'add-connection',
-                            conn,
-                            from: source.id,
-                            to: target.id
-                        });
-                        isTopologyChanged = true;
-
-                        console.log('Koneksi berhasil dibuat?', conn);
-                    }
 
 
             jsPlumb.bind('beforeDrop', (info) => {
