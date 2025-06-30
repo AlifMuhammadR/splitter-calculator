@@ -74,13 +74,13 @@
             <h5 class="fw-bold text-dark"><i class="bi bi-file-earmark-code-fill"></i> Manage File</h5>
             <div class="d-grid gap-2 mb-2">
                 <!-- Export -->
-<button class="btn btn-sm"
-    style="background: linear-gradient(87deg, #2d93ce 0, #107abc 100%); border: none;"
-    onclick="exportTopology()">⬇ Export (.json)</button>
+                <button class="btn btn-sm"
+                    style="background: linear-gradient(87deg, #2d93ce 0, #107abc 100%); border: none;"
+                    onclick="exportTopology()">⬇ Export (.json)</button>
 
-<!-- Import -->
-<input type="file" id="import-file" accept=".json" class="form-control form-control-sm"
-    onchange="importTopology(this.files[0])">
+                <!-- Import -->
+                <input type="file" id="import-file" accept=".json" class="form-control form-control-sm"
+                    onchange="importTopology(this.files[0])">
             </div>
             <div class="divider my-3"></div>
             <a href="{{ route('lab') }}" class="btn w-100 text-white fw-bold mb-2"
@@ -311,10 +311,10 @@
     <script src="https://unpkg.com/jsplumb/dist/js/jsplumb.min.js"></script>
     <script>
         let lab = {
-    name: '{{ $lab['name'] ?? '' }}',
-    author: '{{ $lab['author'] ?? '' }}',
-    description: '{{ $lab['description'] ?? '' }}'
-};
+            name: '{{ $lab['name'] ?? '' }}',
+            author: '{{ $lab['author'] ?? '' }}',
+            description: '{{ $lab['description'] ?? '' }}'
+        };
         const inputPower = document.getElementById('input-power');
         const mapCanvas = document.getElementById('map-canvas');
         let nodeId = 0;
@@ -358,13 +358,13 @@
                 return num;
             }
 
-
             // Helper: Membuat elemen node
             function createNodeElement(nodeData) {
                 const el = document.createElement('div');
                 el.classList.add('position-absolute', 'p-2', 'bg-white', 'border', 'rounded', 'text-center');
                 el.setAttribute('id', nodeData.id || `node-${nodeId++}`);
-                // --- PATCH posisi ---
+
+                // Posisi node
                 el.style.left = (typeof nodeData.left === 'number') ?
                     `${nodeData.left}px` :
                     (typeof nodeData.left === 'string' && nodeData.left.endsWith('px')) ?
@@ -380,14 +380,23 @@
                     (!isNaN(Number(nodeData.top)) && nodeData.top !== '' && nodeData.top !== undefined) ?
                     `${Number(nodeData.top)}px` :
                     `${mapCanvas.clientHeight / 2 - 25}px`;
-                el.dataset.loss = nodeData.loss || 0;
-                el.dataset.power = nodeData.power || 0;
+
+                // FIX: Pastikan power valid
+                const fixedPower = (!isNaN(parseFloat(nodeData.power))) ? parseFloat(nodeData.power).toFixed(2) :
+                    '0.00';
+                const fixedLoss = (!isNaN(parseFloat(nodeData.loss))) ? parseFloat(nodeData.loss).toFixed(2) :
+                    '0.00';
+
+                el.dataset.loss = fixedLoss;
+                el.dataset.power = fixedPower;
                 el.dataset.type = nodeData.type || 'Client';
+
                 el.innerHTML = `
-                        <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
-                        <strong>${nodeData.type}</strong>
-                        <div class="output-power" style="font-size: 12px; color: green;">${nodeData.power ? parseFloat(nodeData.power).toFixed(2) : ''} dB</div>
-                    `;
+                <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
+                <strong>${nodeData.type}</strong>
+                <div class="output-power" style="font-size: 12px; color: green;">
+                    ${fixedPower} dB
+                </div>`;
 
                 mapCanvas.appendChild(el);
                 jsPlumb.draggable(el, {
@@ -407,23 +416,15 @@
                         cancelButtonText: 'Batal'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // 🧹 Hapus koneksi yang hanya terhubung ke node ini
                             const toDelete = lines.filter(conn => conn.from === el.id || conn.to === el
                                 .id);
                             toDelete.forEach(conn => jsPlumb.deleteConnection(conn.conn));
                             lines = lines.filter(conn => conn.from !== el.id && conn.to !== el.id);
 
-                            // 🧹 Hapus endpoint dan node-nya
-                            jsPlumb.removeAllEndpoints(el); // Lebih aman daripada deleteEveryEndpoint
-                            mapCanvas.removeChild(el); // Hapus dari DOM
-
-                            // 🧹 Hapus dari array nodes
+                            jsPlumb.removeAllEndpoints(el);
+                            mapCanvas.removeChild(el);
                             nodes = nodes.filter(n => n.id !== el.id);
-
-                            // 🧠 Hapus dari state terpilih
-                            if (selectedNode && selectedNode.id === el.id) {
-                                selectedNode = null;
-                            }
+                            if (selectedNode && selectedNode.id === el.id) selectedNode = null;
 
                             isTopologyChanged = true;
                             document.getElementById('info-card').classList.add('d-none');
@@ -431,8 +432,7 @@
                     });
                 };
 
-
-                // Node-to-node click
+                // Event klik node → koneksi kabel
                 el.onclick = (e) => {
                     if (e.target.classList.contains('jsplumb-endpoint') || e.target.classList.contains(
                             'btn-delete-node')) return;
@@ -443,14 +443,14 @@
                         Swal.fire({
                             title: 'Connect Nodes',
                             html: `
-                        <div class="text-start mb-2">Cable Length (meters)</div>
-                        <input id="swal-length" type="number" class="swal2-input" value="50">
-                        <div class="text-start mb-2 mt-2">Cable Type</div>
-                        <select id="swal-cable" class="swal2-select">
-                            <option value="dropcore" selected>Dropcore (0.2 dB/km)</option>
-                            <option value="patchcord">Patchcord (0.3 dB/km)</option>
-                        </select>
-                    `,
+                    <div class="text-start mb-2">Cable Length (meters)</div>
+                    <input id="swal-length" type="number" class="swal2-input" value="50">
+                    <div class="text-start mb-2 mt-2">Cable Type</div>
+                    <select id="swal-cable" class="swal2-select">
+                        <option value="dropcore" selected>Dropcore (0.2 dB/km)</option>
+                        <option value="patchcord">Patchcord (0.3 dB/km)</option>
+                    </select>
+                `,
                             focusConfirm: false,
                             confirmButtonText: 'Connect',
                             showCancelButton: true,
@@ -485,7 +485,7 @@
                     }
                 };
 
-                // Tambahkan endpoint
+                // Tambahkan endpoint JSPlumb
                 const endpointCount = nodeData.type.startsWith('Splitter') ? parseInt(nodeData.type.split(' ')[1]
                     .split(':')[1]) || 4 : 1;
                 const anchors = nodeData.type.startsWith('Splitter') ?
@@ -714,7 +714,7 @@
                 isTopologyChanged = true;
             }
 
-            function connectNodeElementsByData(link) {
+            function connectNodeElementsByData(link, options = {}) {
                 const source = document.getElementById(link.from);
                 const target = document.getElementById(link.to);
 
@@ -723,13 +723,15 @@
                 console.log('🧩 target?', target);
 
                 if (!source || !target) return;
+
                 const color = getColorByCableName(link.cable);
-                const lossCable = link.loss || 0;
+                const lossCable = parseFloat(link.loss || 0);
                 const paint = {
                     stroke: color,
                     strokeWidth: 2,
                     dashstyle: link.cable === 'Patchcord' ? '4 2' : undefined
                 };
+
                 const conn = jsPlumb.connect({
                     source,
                     target,
@@ -767,7 +769,6 @@
                     ]
                 });
 
-                // 🔥 Tambahin overlay tombol hapus setelah koneksi dibuat
                 conn.addOverlay(['Custom', {
                     create: function() {
                         const btn = document.createElement('div');
@@ -807,7 +808,6 @@
                     id: 'delete-button'
                 }]);
 
-
                 conn.bind('contextmenu', (conn, e) => {
                     e.preventDefault();
                     if (confirm('Hapus kabel ini?')) {
@@ -820,32 +820,43 @@
                 lines.push({
                     from: source.id,
                     to: target.id,
-                    cable: selectedCableName,
+                    cable: link.cable,
                     loss: lossCable,
-                    length,
+                    length: link.length,
                     conn
                 });
 
-                document.getElementById('info-card').classList.remove('d-none');
-                document.getElementById('total-loss').innerText = lossCable.toFixed(2);
+                // ⬇️ POWER HANDLING FIXED BANGET DI SINI
+                const fromPower = options.skipPowerCalc ?
+                    parseFloat(source.dataset.power || 0) :
+                    parseFloat(source.dataset.power || inputPower?.value || 0);
 
-                const fromPower = parseFloat(source.dataset.power || inputPower?.value || 0);
-                const powerRx = fromPower - lossCable;
-                if (target.querySelector('.output-power')) {
-                    target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
+                let powerRx = fromPower - lossCable;
+
+                if (!options.skipPowerCalc) {
+                    target.dataset.power = powerRx.toFixed(2);
+                    if (target.querySelector('.output-power')) {
+                        target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
+                    }
+                } else {
+                    powerRx = parseFloat(target.dataset.power || 0); // jaga-jaga kalau memang udah diset
                 }
+
+                document.getElementById('info-card')?.classList.remove('d-none');
+                document.getElementById('total-loss').innerText = lossCable.toFixed(2);
                 document.getElementById('power-rx').innerText = powerRx.toFixed(2);
                 document.getElementById('jalur-text').innerText =
                     `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
+
                 actions.push({
                     type: 'add-connection',
                     conn,
                     from: source.id,
                     to: target.id
                 });
-                isTopologyChanged = true;
 
-                console.log('Koneksi berhasil dibuat?', conn);
+                isTopologyChanged = true;
+                console.log('✅ Koneksi berhasil dibuat!', conn);
             }
 
 
@@ -986,10 +997,6 @@
                     id: 'delete-button'
                 }]);
 
-
-
-
-
                 const source = conn.source;
                 const target = conn.target;
                 lines.push({
@@ -1003,11 +1010,19 @@
 
                 document.getElementById('info-card').classList.remove('d-none');
                 document.getElementById('total-loss').innerText = lossCable.toFixed(2);
-                const fromPower = parseFloat(source.dataset.power || inputPower?.value || 0);
-                const powerRx = fromPower - lossCable;
-                if (target.querySelector('.output-power')) {
-                    target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
+
+                let powerRx;
+
+                if (!options.skipPowerCalc) {
+                    powerRx = fromPower - lossCable;
+                    target.dataset.power = powerRx.toFixed(2);
+                    if (target.querySelector('.output-power')) {
+                        target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
+                    }
+                } else {
+                    powerRx = parseFloat(target.dataset.power || 0); // Ambil dari data yg udah diimport
                 }
+
                 document.getElementById('power-rx').innerText = powerRx.toFixed(2);
                 document.getElementById('jalur-text').innerText =
                     `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
@@ -1087,7 +1102,8 @@
                     id: el.id,
                     type: node.type,
                     loss: parseFloat(node.loss || 0),
-                    power: parseFloat(node.power || 0),
+                    power: node.power !== undefined && node.power !== null ? parseFloat(node.power) :
+                        undefined,
                     top: node.top,
                     left: node.left
                 });
@@ -1154,6 +1170,14 @@
              * Menghitung rugi-rugi untuk semua koneksi.
              */
             window.calculateAllLoss = function() {
+                if (options.skipIfPowerExists) {
+                    const allNodesHavePower = nodes.every(n => typeof n.power !== 'undefined' && n.power !==
+                        null);
+                    if (allNodesHavePower) {
+                        console.log('[INFO] Skip loss calculation — power udah ada semua');
+                        return;
+                    }
+                }
                 lines.forEach(conn => {
                     const from = document.getElementById(conn.from);
                     const to = document.getElementById(conn.to);
@@ -1181,7 +1205,7 @@
                         return;
                     }
 
-                    // 🔄 Reset semua dulu
+                    // 🔄 Reset canvas & data
                     jsPlumb.deleteEveryEndpoint();
                     jsPlumb.deleteEveryConnection();
                     mapCanvas.innerHTML = '';
@@ -1190,176 +1214,209 @@
                     nodeId = 0;
                     selectedNode = null;
 
-                    // 🧱 Buat node dari DB
+                    // 🧱 Tambah node
                     data.nodes.filter(n => n && n.id && n.type).forEach(node => {
                         node.type = node.type || 'Client';
                         addNodeFromDB(node);
                     });
 
-                    // ⏳ Tunggu render node selesai
+                    // ⏳ Delay agar node benar-benar muncul di DOM
                     setTimeout(() => {
                         requestAnimationFrame(() => {
+                            let success = 0;
+                            let failed = 0;
+
                             console.log('🔗 Mulai menggambar koneksi...');
                             data.connections.forEach(link => {
-                                console.log(
-                                    `🔌 Connecting: ${link.from} -> ${link.to}`);
-                                connectNodeElementsByData(link);
+                                const src = document.getElementById(link.from);
+                                const dst = document.getElementById(link.to);
+                                if (!src || !dst) {
+                                    console.warn(
+                                        `❌ Gagal hubungkan: ${link.from} → ${link.to}`
+                                    );
+                                    failed++;
+                                    return;
+                                }
+                                connectNodeElementsByData(link, {
+                                    skipPowerCalc: true
+                                });
+                                success++;
                             });
 
-                            // 🌟 Set power & kalkulasi ulang
+                            // 🌟 Set power & hitung loss terakhir
                             if (inputPower) inputPower.value = data.power || 0;
-                            calculateAllLoss();
+                            calculateAllLoss({
+                                skipIfPowerExists: true
+                            });
 
-                            // 🖌️ Repaint ulang setelah semuanya selesai
                             jsPlumb.repaintEverything();
-                        });
-                    }, 300); // Delay kecil agar semua node udah masuk ke DOM
-                    console.log('✅ Topology loaded successfully!');
 
+                            console.log(
+                                `✅ Topology loaded successfully! (${success} koneksi, ${failed} gagal)`
+                            );
+                        });
+                    }, 400); // ⏱️ Bisa ditambah ke 500 kalau kadang masih blank
                 } catch (error) {
                     console.error('❌ Load topology error:', error);
                     Swal.fire({
                         icon: 'error',
-                        title: 'Failed to Load Topology',
-                        text: 'Please try again later.'
+                        title: 'Gagal Load Topologi',
+                        text: 'Coba lagi nanti.'
                     });
                 }
             };
 
-
             /**
              * Mengekspor topologi ke file JSON.
              */
-            window.exportTopology = function () {
-                    console.log('✅ Export function called');
-    // Pastikan variabel global
-    if (typeof nodes === 'undefined' || typeof lines === 'undefined') {
-        Swal.fire({
-            icon: 'error',
-            title: 'Export Failed',
-            text: 'Node atau koneksi belum dibuat.'
-        });
-        return;
-    }
+            window.exportTopology = function() {
+                console.log('✅ Export function called');
+                // Pastikan variabel global
+                if (typeof nodes === 'undefined' || typeof lines === 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Export Failed',
+                        text: 'Node atau koneksi belum dibuat.'
+                    });
+                    return;
+                }
 
-    const topology = {
-        nodes,
-        connections: lines.map(link => ({
-            from: link.from,
-            to: link.to,
-            cable: link.cable,
-            loss: link.loss,
-            length: link.length
-        })),
-        power: parseFloat(inputPower?.value || 0),
-        name: lab?.name || 'topologi',
-        author: lab?.author || '',
-        description: lab?.description || ''
-    };
+                const topology = {
+                    nodes,
+                    connections: lines.map(link => ({
+                        from: link.from,
+                        to: link.to,
+                        cable: link.cable,
+                        loss: link.loss,
+                        length: link.length
+                    })),
+                    power: parseFloat(inputPower?.value || 0),
+                    name: lab?.name || 'topologi',
+                    author: lab?.author || '',
+                    description: lab?.description || ''
+                };
 
-    if (topology.nodes.length === 0 || topology.connections.length === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No Data to Export',
-            text: 'Silakan tambahkan node dan koneksi terlebih dahulu.'
-        });
-        return;
-    }
+                if (topology.nodes.length === 0 || topology.connections.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Data to Export',
+                        text: 'Silakan tambahkan node dan koneksi terlebih dahulu.'
+                    });
+                    return;
+                }
 
-    const filename = `topologi-${(topology.name || 'export').replace(/\s+/g, '_')}.json`;
-    const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(topology, null, 2))}`;
+                const filename = `topologi-${(topology.name || 'export').replace(/\s+/g, '_')}.json`;
+                const dataStr =
+                    `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(topology, null, 2))}`;
 
-    const dlAnchor = document.createElement('a');
-    dlAnchor.setAttribute('href', dataStr);
-    dlAnchor.setAttribute('download', filename);
-    document.body.appendChild(dlAnchor);
-    dlAnchor.click();
-    dlAnchor.remove();
+                const dlAnchor = document.createElement('a');
+                dlAnchor.setAttribute('href', dataStr);
+                dlAnchor.setAttribute('download', filename);
+                document.body.appendChild(dlAnchor);
+                dlAnchor.click();
+                dlAnchor.remove();
 
-    isTopologyChanged = false;
-};
+                isTopologyChanged = false;
+            };
 
-window.importTopology = function (file) {
-    if (!file) return;
+            window.importTopology = function(file) {
+                if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const imported = JSON.parse(e.target.result);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const imported = JSON.parse(e.target.result);
 
-            // Reset canvas dulu
-            jsPlumb.deleteEveryEndpoint();
-            jsPlumb.deleteEveryConnection();
-            mapCanvas.innerHTML = '';
-            nodes = [];
-            lines = [];
-            nodeId = 0;
-            selectedNode = null;
+                        // Reset canvas dulu
+                        jsPlumb.deleteEveryEndpoint();
+                        jsPlumb.deleteEveryConnection();
+                        mapCanvas.innerHTML = '';
+                        nodes = [];
+                        lines = [];
 
-            // Load data
-            imported.nodes?.forEach(node => addNodeFromDB(node));
+                        nodeId = 0;
+                        selectedNode = null;
+                        actions = [];
+                        lab = {
+                            name: '',
+                            author: '',
+                            description: ''
+                        };
+                        inputPower.value = imported.power || 0;
 
-            // Delay agar node sudah siap dirender
-            setTimeout(() => {
-                imported.connections?.forEach(link => connectNodeElementsByData(link));
-                inputPower.value = imported.power || 0;
+                        // Load data node dari JSON
+                        imported.nodes?.forEach(node => addNodeFromDB(node));
 
-                // Simpan info tambahan
-                lab.name = imported.name || '';
-                lab.author = imported.author || '';
-                lab.description = imported.description || '';
+                        // Delay agar node sudah dirender dulu
+                        setTimeout(() => {
+                            window.__skipPowerCalcOnImport__ = true;
+                            imported.connections?.forEach(link => connectNodeElementsByData(link, {
+                                skipPowerCalc: true
+                            }));
+                            window.__skipPowerCalcOnImport__ = false;
 
-                calculateAllLoss();
-                jsPlumb.repaintEverything();
+                            // Ambil power dari JSON langsung, bukan dihitung ulang
+                            inputPower.value = imported.power || 0;
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Import Berhasil',
-                    text: `Berhasil memuat topologi "${lab.name}"`
-                });
+                            // Simpan info lab
+                            lab.name = imported.name || '';
+                            lab.author = imported.author || '';
+                            lab.description = imported.description || '';
 
+                            // Jangan hitung ulang biar power asli dari file gak ketiban!
+                            // calculateAllLoss(); ← ini sengaja DIHAPUS atau DIKOMENTARI
+
+                            jsPlumb.repaintEverything();
+
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Import Berhasil',
+                                text: `Berhasil memuat topologi "${lab.name}"`
+                            });
+
+                            isTopologyChanged = true;
+                        }, 300);
+                    } catch (err) {
+                        console.error(err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal Import',
+                            text: 'File tidak valid atau rusak.'
+                        });
+                    }
+                };
+
+                reader.readAsText(file);
                 isTopologyChanged = true;
-            }, 300);
-        } catch (err) {
-            console.error(err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Gagal Import',
-                text: 'File tidak valid atau rusak.'
-            });
-        }
-    };
-    reader.readAsText(file);
-    isTopologyChanged = true;
-};
-
+                document.getElementById('import-file').value = ''; // Reset file input sesuai ID input
+            };
 
             /**
              * Mengumpulkan dan menyimpan topologi ke server.
              */
             window.gatherAndSaveTopology = async function() {
                 console.log('Save button clicked');
-const topology = {
-    nodes: Array.from(document.querySelectorAll('.position-absolute')).map(el => ({
-        id: el.id,
-        type: el.dataset.type || '',
-        loss: parseFloat(el.dataset.loss || 0),
-        power: parseFloat(el.dataset.power || 0),
-        top: el.style.top || el.offsetTop + 'px',
-        left: el.style.left || el.offsetLeft + 'px'
-    })),
-    connections: lines.map(link => ({
-        from: link.from,
-        to: link.to,
-        cable: link.cable,
-        loss: link.loss,
-        length: link.length
-    })),
-    power: parseFloat(inputPower?.value || 0),
-    name: '{{ $lab['name'] ?? '' }}',
-    author: '{{ $lab['author'] ?? '' }}',
-    description: '{{ $lab['description'] ?? '' }}'
-};
+                const topology = {
+                    nodes: Array.from(document.querySelectorAll('.position-absolute')).map(el => ({
+                        id: el.id,
+                        type: el.dataset.type || '',
+                        loss: parseFloat(el.dataset.loss || 0),
+                        power: parseFloat(el.dataset.power || 0),
+                        top: el.style.top || el.offsetTop + 'px',
+                        left: el.style.left || el.offsetLeft + 'px'
+                    })),
+                    connections: lines.map(link => ({
+                        from: link.from,
+                        to: link.to,
+                        cable: link.cable,
+                        loss: link.loss,
+                        length: link.length
+                    })),
+                    power: parseFloat(inputPower?.value || 0),
+                    name: '{{ $lab['name'] ?? '' }}',
+                    author: '{{ $lab['author'] ?? '' }}',
+                    description: '{{ $lab['description'] ?? '' }}'
+                };
                 console.log('Topology data:', topology);
 
                 const labId = mapCanvas.dataset.labId;
