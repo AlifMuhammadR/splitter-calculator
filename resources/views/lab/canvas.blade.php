@@ -1202,6 +1202,7 @@
 
                     if (!data.nodes || !data.connections) {
                         console.warn('⚠️ Data kosong (nodes atau connections)');
+                        Swal.close();
                         return;
                     }
 
@@ -1250,12 +1251,13 @@
                             });
 
                             jsPlumb.repaintEverything();
+                            Swal.close(); // ✅ TUTUP loading Swal saat selesai
 
                             console.log(
                                 `✅ Topology loaded successfully! (${success} koneksi, ${failed} gagal)`
                             );
                         });
-                    }, 400); // ⏱️ Bisa ditambah ke 500 kalau kadang masih blank
+                    }, 400); // ⏱️ Delay untuk pastikan node sudah muncul
                 } catch (error) {
                     console.error('❌ Load topology error:', error);
                     Swal.fire({
@@ -1264,6 +1266,7 @@
                         text: 'Coba lagi nanti.'
                     });
                 }
+                isTopologyChanged = false;
             };
 
             /**
@@ -1468,11 +1471,9 @@
                 }
             };
 
-            window.onload = function() {
-                const labId = document.getElementById('map-canvas').dataset.labId;
-                console.log('Auto-load lab ID:', labId);
-                if (labId) loadTopology(labId);
-            };
+            const labId = document.getElementById('map-canvas').dataset.labId;
+            console.log('Auto-load lab ID:', labId);
+            if (labId) loadTopology(labId);
 
             window.onbeforeunload = function() {
                 if (isTopologyChanged) return 'Perubahan Anda belum disimpan. Yakin ingin keluar?';
