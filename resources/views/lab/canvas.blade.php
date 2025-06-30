@@ -73,11 +73,14 @@
             <div class="divider my-3"></div>
             <h5 class="fw-bold text-dark"><i class="bi bi-file-earmark-code-fill"></i> Manage File</h5>
             <div class="d-grid gap-2 mb-2">
-                <button class="btn btn-sm"
-                    style="background: linear-gradient(87deg, #2d93ce 0, #107abc 100%); border: none;"
-                    onclick="exportTopology()">⬇ Export (.json)</button>
-                <input type="file" id="import-file" accept=".json" class="form-control form-control-sm"
-                    onchange="importTopology(this.files[0])">
+                <!-- Export -->
+<button class="btn btn-sm"
+    style="background: linear-gradient(87deg, #2d93ce 0, #107abc 100%); border: none;"
+    onclick="exportTopology()">⬇ Export (.json)</button>
+
+<!-- Import -->
+<input type="file" id="import-file" accept=".json" class="form-control form-control-sm"
+    onchange="importTopology(this.files[0])">
             </div>
             <div class="divider my-3"></div>
             <a href="{{ route('lab') }}" class="btn w-100 text-white fw-bold mb-2"
@@ -307,6 +310,11 @@
     <!-- Ganti LeaderLine dengan jsPlumb -->
     <script src="https://unpkg.com/jsplumb/dist/js/jsplumb.min.js"></script>
     <script>
+        let lab = {
+    name: '{{ $lab['name'] ?? '' }}',
+    author: '{{ $lab['author'] ?? '' }}',
+    description: '{{ $lab['description'] ?? '' }}'
+};
         const inputPower = document.getElementById('input-power');
         const mapCanvas = document.getElementById('map-canvas');
         let nodeId = 0;
@@ -1222,61 +1230,136 @@
             /**
              * Mengekspor topologi ke file JSON.
              */
-            window.exportTopology = function() {
-                const topology = {
-                    nodes,
-                    connections: lines.map(link => ({
-                        from: link.from,
-                        to: link.to,
-                        cable: link.cable,
-                        loss: link.loss,
-                        length: link.length
-                    })),
-                    power: parseFloat(inputPower?.value || 0),
-                    name: lab.name || '',
-                    author: lab.author || '',
-                    description: lab.description || ''
-                };
+            window.exportTopology = function () {
+                    console.log('✅ Export function called');
+    // Pastikan variabel global
+    if (typeof nodes === 'undefined' || typeof lines === 'undefined') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Export Failed',
+            text: 'Node atau koneksi belum dibuat.'
+        });
+        return;
+    }
 
-                if (topology.nodes.length === 0 || topology.connections.length === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'No Data to Export',
-                        text: 'Please add nodes and connections before exporting.'
-                    });
-                    return;
-                }
+    const topology = {
+        nodes,
+        connections: lines.map(link => ({
+            from: link.from,
+            to: link.to,
+            cable: link.cable,
+            loss: link.loss,
+            length: link.length
+        })),
+        power: parseFloat(inputPower?.value || 0),
+        name: lab?.name || 'topologi',
+        author: lab?.author || '',
+        description: lab?.description || ''
+    };
 
-                const dataStr =
-                    `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(topology, null, 2))}`;
-                const dlAnchor = document.createElement('a');
-                dlAnchor.setAttribute('href', dataStr);
-                dlAnchor.setAttribute('download', `topologi-${topology.name.replace(/\s+/g, '_')}.json`);
-                document.body.appendChild(dlAnchor);
-                dlAnchor.click();
-                dlAnchor.remove();
-                isTopologyChanged = false;
-            };
+    if (topology.nodes.length === 0 || topology.connections.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Data to Export',
+            text: 'Silakan tambahkan node dan koneksi terlebih dahulu.'
+        });
+        return;
+    }
+
+    const filename = `topologi-${(topology.name || 'export').replace(/\s+/g, '_')}.json`;
+    const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(topology, null, 2))}`;
+
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute('href', dataStr);
+    dlAnchor.setAttribute('download', filename);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+
+    isTopologyChanged = false;
+};
+
+window.importTopology = function (file) {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+
+            // Reset canvas dulu
+            jsPlumb.deleteEveryEndpoint();
+            jsPlumb.deleteEveryConnection();
+            mapCanvas.innerHTML = '';
+            nodes = [];
+            lines = [];
+            nodeId = 0;
+            selectedNode = null;
+
+            // Load data
+            imported.nodes?.forEach(node => addNodeFromDB(node));
+
+            // Delay agar node sudah siap dirender
+            setTimeout(() => {
+                imported.connections?.forEach(link => connectNodeElementsByData(link));
+                inputPower.value = imported.power || 0;
+
+                // Simpan info tambahan
+                lab.name = imported.name || '';
+                lab.author = imported.author || '';
+                lab.description = imported.description || '';
+
+                calculateAllLoss();
+                jsPlumb.repaintEverything();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Import Berhasil',
+                    text: `Berhasil memuat topologi "${lab.name}"`
+                });
+
+                isTopologyChanged = true;
+            }, 300);
+        } catch (err) {
+            console.error(err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Import',
+                text: 'File tidak valid atau rusak.'
+            });
+        }
+    };
+    reader.readAsText(file);
+    isTopologyChanged = true;
+};
+
 
             /**
              * Mengumpulkan dan menyimpan topologi ke server.
              */
             window.gatherAndSaveTopology = async function() {
                 console.log('Save button clicked');
-                const topology = {
-                    nodes,
-                    connections: lines.map(link => ({
-                        from: link.from,
-                        to: link.to,
-                        cable: link.cable,
-                        loss: link.loss,
-                        length: link.length
-                    })),
-                    power: parseFloat(inputPower?.value || 0),
-                    name: '{{ $lab['name'] ?? '' }}',
-                    author: '{{ $lab['author'] ?? '' }}',
-                    description: '{{ $lab['description'] ?? '' }}'
-                };
+const topology = {
+    nodes: Array.from(document.querySelectorAll('.position-absolute')).map(el => ({
+        id: el.id,
+        type: el.dataset.type || '',
+        loss: parseFloat(el.dataset.loss || 0),
+        power: parseFloat(el.dataset.power || 0),
+        top: el.style.top || el.offsetTop + 'px',
+        left: el.style.left || el.offsetLeft + 'px'
+    })),
+    connections: lines.map(link => ({
+        from: link.from,
+        to: link.to,
+        cable: link.cable,
+        loss: link.loss,
+        length: link.length
+    })),
+    power: parseFloat(inputPower?.value || 0),
+    name: '{{ $lab['name'] ?? '' }}',
+    author: '{{ $lab['author'] ?? '' }}',
+    description: '{{ $lab['description'] ?? '' }}'
+};
                 console.log('Topology data:', topology);
 
                 const labId = mapCanvas.dataset.labId;

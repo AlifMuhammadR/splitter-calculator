@@ -12,6 +12,23 @@
             padding: 10px 14px;
         }
 
+        .jtk-connector {
+    z-index: 1000 !important;
+}
+.jtk-overlay {
+    z-index: 1001 !important;
+}
+
+.connection-label {
+    font-size: 0.8rem;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    color: red;
+}
+
+
         #lab-list .list-group-item:hover {
             background-color: #f1f3f5;
             box-shadow: 0 0.3rem 0.5rem rgba(0, 0, 0, 0.03);
@@ -186,7 +203,7 @@
         </script>
     @endif
 
-    <script src="https://cdn.jsdelivr.net/npm/leader-line@1.0.7/leader-line.min.js"></script>
+       <script src="https://unpkg.com/jsplumb@2.15.6/dist/js/jsplumb.min.js"></script>
     <script>
         /**
          * Loads folders and labs based on the given folder ID and search query.
@@ -370,5 +387,5 @@
             console.log('Open New Folder Create');
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 @endsection

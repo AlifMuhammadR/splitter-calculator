@@ -19,6 +19,7 @@ function showToast(icon, title) {
  * Fetches and displays a preview of a lab topology.
  * @param {string} labId - The ID of the lab to preview.
  */
+
 function previewLab(labId) {
     fetch(`/lab/preview/${labId}`)
         .then(res => {
@@ -28,8 +29,8 @@ function previewLab(labId) {
         .then(data => {
             const panel = document.getElementById('preview-panel');
             panel.innerHTML = `
-                <div id="canvas-preview-wrapper" style="width: 100%; height: calc(100vh - 250px); overflow: auto; position: relative; background: #f8f9fa; border-radius: 8px;">
-                    <div id="canvas-preview" style="position: relative; width: 1000px; height: 800px;"></div>
+                <div id="canvas-preview-wrapper" style="width: 100%; height: calc(100vh - 250px); overflow: visible; position: relative; background: #f8f9fa; border-radius: 8px;">
+                    <div id="canvas-preview" style="position: relative;"></div>
                 </div>
                 <div class="card mt-3 border-info shadow-sm" style="font-size: 0.9rem;">
                     <div class="card-header bg-info text-white fw-bold">
@@ -43,40 +44,36 @@ function previewLab(labId) {
                 </div>
             `;
 
-            // Set author
             document.getElementById('lab-author').innerHTML =
                 `<i class="bi bi-person-fill me-1"></i> ${data.author || '-'}`;
 
-            // Render node on canvas
             const canvas = document.getElementById('canvas-preview');
             const nodeMap = {};
 
             data.nodes.forEach(node => {
                 const el = document.createElement('div');
                 el.className = 'node-preview shadow-sm';
+                el.id = node.id;
                 el.innerHTML = `
                     <div class="fw-bold text-center">${node.type}</div>
                     <div class="text-center text-success small">${node.power?.toFixed(2) ?? 0} dB</div>
                 `;
                 el.style.position = 'absolute';
-                el.style.top = node.top;
                 el.style.left = node.left;
-                el.style.padding = '8px 12px';
+                el.style.top = node.top;
+                el.style.padding = '12px 16px';
                 el.style.background = 'white';
-                el.style.borderRadius = '8px';
                 el.style.border = '1px solid #ccc';
-                el.style.minWidth = '80px';
+                el.style.borderRadius = '8px';
+                el.style.minWidth = '100px';
+                el.style.lineHeight = '1.3';
+                el.style.textAlign = 'center';
+                el.style.zIndex = '2';
                 canvas.appendChild(el);
                 nodeMap[node.id] = el;
             });
 
-            // After rendering nodes, auto-scale if necessary
-            const canvasWrapper = document.getElementById('canvas-preview-wrapper');
-            const canvasInner = document.getElementById('canvas-preview');
-
-            // Calculate bounding box of nodes
-            let maxRight = 0,
-                maxBottom = 0;
+            let maxRight = 0, maxBottom = 0;
             data.nodes.forEach(n => {
                 const left = parseFloat(n.left);
                 const top = parseFloat(n.top);
@@ -84,48 +81,67 @@ function previewLab(labId) {
                 if (top + 100 > maxBottom) maxBottom = top + 100;
             });
 
-            // Set canvas size & scale
-            canvasInner.style.width = `${maxRight}px`;
-            canvasInner.style.height = `${maxBottom}px`;
-            canvasInner.style.margin = '0 auto';
+            const canvasWrapper = document.getElementById('canvas-preview-wrapper');
+            canvas.style.width = `${maxRight}px`;
+            canvas.style.height = `${maxBottom}px`;
+            canvas.style.margin = '0 auto';
 
-            // Calculate scale to fit all
             const scaleX = canvasWrapper.clientWidth / maxRight;
             const scaleY = canvasWrapper.clientHeight / maxBottom;
-            const scale = Math.min(scaleX, scaleY, 1); // Do not exceed 100%
+            const scale = Math.min(scaleX, scaleY, 1);
+            canvas.style.transform = `scale(${scale})`;
+            canvas.style.transformOrigin = 'top left';
 
-            canvasInner.style.transform = `scale(${scale})`;
-            canvasInner.style.transformOrigin = 'top left';
-
-            // Render connections using LeaderLine
-            setTimeout(() => {
-                data.connections.forEach(conn => {
-                    const fromEl = nodeMap[conn.from];
-                    const toEl = nodeMap[conn.to];
-                    if (fromEl && toEl) {
-                        const line = new LeaderLine(
-                            LeaderLine.pointAnchor(fromEl, {
-                                x: '50%',
-                                y: '100%'
-                            }),
-                            LeaderLine.pointAnchor(toEl, {
-                                x: '50%',
-                                y: '0%'
-                            }), {
-                                dash: true,
-                                color: conn.color || 'black',
-                                size: 2,
-                                startPlug: 'behind',
-                                endPlug: 'arrow',
-                                path: 'straight',
-                                startLabel: LeaderLine.captionLabel(`-${conn.loss.toFixed(2)} dB`, {
-                                    color: 'red'
-                                })
-                            }
-                        );
-                    }
+            jsPlumb.ready(() => {
+                const instance = jsPlumb.getInstance({
+                    Container: "canvas-preview",
+                    Connector: ["Flowchart", { cornerRadius: 5 }],
+                    Anchors: ["Continuous", "Continuous"],
+                    Endpoint: "Blank"
                 });
-            }, 100); // Give DOM elements time to be ready
+
+                data.connections.forEach(conn => {
+                    const isPatchcord = conn.cable === 'Patchcord';
+                    const color = isPatchcord ? '#f1c40f' : 'black';
+                    const dash = isPatchcord ? '4 4' : '0';
+
+                    instance.connect({
+                        source: nodeMap[conn.from],
+                        target: nodeMap[conn.to],
+                        paintStyle: {
+                            stroke: color,
+                            strokeWidth: 3,
+                            dashstyle: dash
+                        },
+                        overlays: [
+                            ["Arrow", {
+                                location: 1,
+                                width: 14,
+                                length: 14,
+                                direction: 1,
+                                foldback: 1,
+                                paintStyle: {
+                                    fill: color,
+                                    stroke: color
+                                }
+                            }],
+                            ["Label", {
+                                label: `-${conn.loss.toFixed(2)} dB`,
+                                location: 0.5,
+                                cssClass: "connection-label",
+                                css: {
+                                    backgroundColor: "white",
+                                    color: "red",
+                                    fontWeight: "bold",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                    fontSize: "0.75rem"
+                                }
+                            }]
+                        ]
+                    });
+                });
+            });
         })
         .catch(() => {
             document.getElementById('preview-panel').innerHTML =
@@ -133,6 +149,7 @@ function previewLab(labId) {
             document.getElementById('lab-author').innerHTML = '';
         });
 }
+
 
 /**
  * Redirects to the lab creation page, passing the current folder ID.
