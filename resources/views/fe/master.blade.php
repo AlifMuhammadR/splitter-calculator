@@ -35,8 +35,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="{{ asset('assets/lab.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/leader-line@1.0.7/leader-line.min.js"></script>
-
-
+    <script src="https://unpkg.com/jsplumb@2.15.6/dist/js/jsplumb.min.js"></script>
 
     <!-- =======================================================
   * Template Name: eNno

@@ -15,6 +15,68 @@ function showToast(icon, title) {
     });
 }
 
+function createPreviewNodeElement(node) {
+    const el = document.createElement('div');
+    el.className = 'node-preview shadow-sm';
+    el.id = node.id;
+
+    const fixedPower = (!isNaN(parseFloat(node.power))) ? parseFloat(node.power).toFixed(2) : '0.00';
+    const type = node.type || 'Client';
+
+    let svg = '';
+
+    if (type === 'OLT') {
+        svg = `
+            <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+                <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2"/>
+                <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A"/>
+                <circle cx="9" cy="18" r="1.5" fill="#FBBF24"/>
+                <circle cx="13" cy="18" r="1.5" fill="#FBBF24"/>
+                <circle cx="17" cy="18" r="1.5" fill="#FBBF24"/>
+                <rect x="22" y="16" width="8" height="4" rx="1" fill="#F1F5F9" stroke="#1E3A8A" stroke-width="1"/>
+            </svg>`;
+    } else if (type.startsWith('Splitter')) {
+        svg = `
+            <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+                <rect x="8" y="10" width="20" height="16" rx="3" fill="#10B981" stroke="#047857" stroke-width="2"/>
+                <line x1="18" y1="10" x2="18" y2="26" stroke="#047857" stroke-width="2"/>
+                <circle cx="14" cy="18" r="2" fill="#FBBF24"/>
+                <circle cx="22" cy="18" r="2" fill="#FBBF24"/>
+                <rect x="13" y="25" width="10" height="2" rx="1" fill="#047857"/>
+            </svg>`;
+    } else if (type === 'Client') {
+        svg = `
+            <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+                <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42" stroke="#B45309" stroke-width="2"/>
+                <rect x="13" y="23" width="10" height="2" rx="1" fill="#B45309"/>
+                <circle cx="18" cy="18" r="2" fill="#FBBF24"/>
+            </svg>`;
+    }
+
+    el.innerHTML = `
+        <div class="d-flex flex-column align-items-center">
+            ${svg}
+            <strong style="font-size: 12px;" class="mt-1">${type}</strong>
+            <div class="output-power text-success" style="font-size: 11px;">
+                ${fixedPower} dB
+            </div>
+        </div>
+    `;
+
+    el.style.position = 'absolute';
+    el.style.left = node.left;
+    el.style.top = node.top;
+    el.style.background = 'white';
+    el.style.border = '1px solid #ccc';
+    el.style.borderRadius = '10px';
+    el.style.padding = '6px 8px';
+    el.style.minWidth = '80px';
+    el.style.textAlign = 'center';
+    el.style.zIndex = '2';
+
+    return el;
+}
+
 /**
  * Fetches and displays a preview of a lab topology.
  * @param {string} labId - The ID of the lab to preview.
@@ -27,6 +89,10 @@ function previewLab(labId) {
             return res.json();
         })
         .then(data => {
+            // Hitung total loss & output power
+            const totalLoss = data.connections.reduce((sum, conn) => sum + (conn.loss || 0), 0);
+            const outputNode = data.nodes.find(n => n.type === 'Client') || data.nodes[data.nodes.length - 1];
+
             const panel = document.getElementById('preview-panel');
             panel.innerHTML = `
                 <div id="canvas-preview-wrapper" style="width: 100%; height: calc(100vh - 250px); overflow: visible; position: relative; background: #f8f9fa; border-radius: 8px;">
@@ -37,9 +103,9 @@ function previewLab(labId) {
                         <i class="bi bi-bar-chart-fill me-2"></i> Informasi Loss
                     </div>
                     <div class="card-body">
-                        <div>Total Loss: <span class="text-danger fw-bold">${(data.connections?.[0]?.loss ?? 0).toFixed(2)} dB</span></div>
-                        <div>Output Power: <span class="text-primary fw-bold">${(data.nodes?.[1]?.power ?? 0).toFixed(2)} dBm</span></div>
-                        <div>Jalur: ${data.nodes?.[0]?.type || '?'} → ${data.nodes?.[1]?.type || '?'}</div>
+                        <div>Total Loss: <span class="text-danger fw-bold">${totalLoss.toFixed(2)} dB</span></div>
+                        <div>Output Power: <span class="text-primary fw-bold">${(outputNode?.power ?? 0).toFixed(2)} dBm</span></div>
+                        <div>Jalur: ${data.nodes?.[0]?.type || '?'} → ${outputNode?.type || '?'}</div>
                     </div>
                 </div>
             `;
@@ -51,28 +117,12 @@ function previewLab(labId) {
             const nodeMap = {};
 
             data.nodes.forEach(node => {
-                const el = document.createElement('div');
-                el.className = 'node-preview shadow-sm';
-                el.id = node.id;
-                el.innerHTML = `
-                    <div class="fw-bold text-center">${node.type}</div>
-                    <div class="text-center text-success small">${node.power?.toFixed(2) ?? 0} dB</div>
-                `;
-                el.style.position = 'absolute';
-                el.style.left = node.left;
-                el.style.top = node.top;
-                el.style.padding = '12px 16px';
-                el.style.background = 'white';
-                el.style.border = '1px solid #ccc';
-                el.style.borderRadius = '8px';
-                el.style.minWidth = '100px';
-                el.style.lineHeight = '1.3';
-                el.style.textAlign = 'center';
-                el.style.zIndex = '2';
+                const el = createPreviewNodeElement(node);
                 canvas.appendChild(el);
                 nodeMap[node.id] = el;
             });
 
+            // Hitung ukuran canvas
             let maxRight = 0, maxBottom = 0;
             data.nodes.forEach(n => {
                 const left = parseFloat(n.left);
@@ -149,6 +199,7 @@ function previewLab(labId) {
             document.getElementById('lab-author').innerHTML = '';
         });
 }
+
 
 
 /**
