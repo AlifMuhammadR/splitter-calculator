@@ -13,4 +13,8 @@ class Lab extends Model
     {
         return $this->belongsTo(LabGroup::class, 'lab_group_id');
     }
+    public function topologies()
+    {
+        return $this->hasMany(\App\Models\Topology::class);
+    }
 }

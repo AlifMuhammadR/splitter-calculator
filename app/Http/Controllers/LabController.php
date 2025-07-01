@@ -306,7 +306,22 @@ class LabController extends Controller
 
     public function topologi(Lab $lab)
     {
-        return view('lab.canvas', compact('lab'));
+        $path = $lab->lab_group_id
+            ? 'labs/' . $lab->group->fullSlugPath() . '/' . $lab->slug . '.json'
+            : 'labs/' . $lab->slug . '.json';
+
+        if (!Storage::exists($path)) {
+            return abort(404, 'File not found');
+        }
+
+        $json = json_decode(Storage::get($path), true);
+
+        return view('lab.canvas', [
+            'lab' => $lab,
+            'nodesJson' => json_encode($json['nodes'] ?? []),
+            'connectionsJson' => json_encode($json['connections'] ?? []),
+            'power' => $json['power'] ?? 0,
+        ]);
     }
 
     public function getJsonExport($id)
