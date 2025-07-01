@@ -26,19 +26,39 @@
             </div>
             <h5 class="fw-bold text-dark">Add Node</h5>
             <div class="d-grid gap-2 mb-2">
-                <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('OLT')">
-                    <i class="fas fa-broadcast-tower me-1"></i> OLT
-                </button>
-                <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('Splitter')">
-                    <i class="fas fa-code-branch me-1"></i> Splitter
-                </button>
-                {{-- <button class="btn btn-sm btn-outline-primary text-dark" onclick="addNode('ODP')">
-                    <i class="fas fa-network-wired me-1"></i> ODP
-                </button> --}}
-                <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('Client')">
-                    <i class="fas fa-user me-1"></i> Client
-                </button>
-            </div>
+    <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('OLT')">
+        <!-- SVG OLT -->
+        <svg width="20" height="20" viewBox="0 0 36 36" fill="none" style="vertical-align:middle;">
+          <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2"/>
+          <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A"/>
+          <circle cx="9" cy="18" r="1.5" fill="#FBBF24"/>
+          <circle cx="13" cy="18" r="1.5" fill="#FBBF24"/>
+          <circle cx="17" cy="18" r="1.5" fill="#FBBF24"/>
+          <rect x="22" y="16" width="8" height="4" rx="1" fill="#F1F5F9" stroke="#1E3A8A" stroke-width="1"/>
+        </svg>
+        OLT
+    </button>
+    <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('Splitter')">
+        <!-- SVG Splitter -->
+        <svg width="20" height="20" viewBox="0 0 36 36" fill="none" style="vertical-align:middle;">
+          <rect x="8" y="10" width="20" height="16" rx="3" fill="#10B981" stroke="#047857" stroke-width="2"/>
+          <line x1="18" y1="10" x2="18" y2="26" stroke="#047857" stroke-width="2"/>
+          <circle cx="14" cy="18" r="2" fill="#FBBF24"/>
+          <circle cx="22" cy="18" r="2" fill="#FBBF24"/>
+          <rect x="13" y="25" width="10" height="2" rx="1" fill="#047857"/>
+        </svg>
+        Splitter
+    </button>
+    <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('Client')">
+        <!-- SVG Client -->
+        <svg width="20" height="20" viewBox="0 0 36 36" fill="none" style="vertical-align:middle;">
+          <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42" stroke="#B45309" stroke-width="2"/>
+          <rect x="13" y="23" width="10" height="2" rx="1" fill="#B45309"/>
+          <circle cx="18" cy="18" r="2" fill="#FBBF24"/>
+        </svg>
+        Client
+    </button>
+</div>
             <h5 class="fw-bold text-dark">Cable Type</h5>
             <div class="d-flex gap-2 mb-2">
                 <div class="cable-option p-2 bg-light text-dark rounded text-center flex-fill cursor-pointer">
@@ -131,20 +151,52 @@
             font-weight: bold;
             box-shadow: 1px 1px 4px #ececec;
         }
+        #info-card .card-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+#info-card .output-power-node {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    gap: 0.5em;
+    margin-bottom: 2px;
+}
+#info-card .output-power-node .node-name {
+    min-width: 62px;
+    font-weight: 500;
+    color: #22c55e;
+}
+#info-card .output-power-node .node-power {
+    font-weight: 500;
+    color: #0ea5e9;
+}
+#info-card small.text-muted {
+    font-size:12px;
+}
     </style>
 
-    <!-- Informasi Loss Panel -->
-    <div id="info-card" class="card shadow-sm border border-info d-none"
-        style="position: fixed; top: 360px; right: 20px; min-width: 250px;transition: all 0.3s ease-in-out; z-index: 1;">
-        <div class="card-body">
-            <h5 class="card-title text-info">📊 Informasi Loss</h5>
-            <hr>
-            <p>Total Loss: <strong id="total-loss" class="text-danger">-</strong> dB</p>
-            <p>Output Power: <strong id="power-rx" class="text-primary">-</strong> dBm</p>
-            <p>Jalur: <span id="jalur-text" class="text-muted">-</span></p>
-            <div id="loss-status" class="mt-3"></div>
+<div id="info-card" class="card shadow-sm border border-info d-none"
+    style="position: fixed; top: 360px; right: 20px; min-width: 280px; max-width:340px; transition: all 0.3s ease-in-out; z-index: 10;">
+    <div class="card-body px-3 py-2">
+        <h6 class="card-title text-info mb-2" style="font-weight:600;">📊 Informasi Loss</h6>
+        <hr class="my-2">
+
+        <div class="mb-2" style="font-size: 14px;">
+            <div>Total Loss: <strong id="total-loss" class="text-danger" style="font-size: 1.2em;">-</strong> dB</div>
+            <small class="text-muted" id="detail-cable-loss"></small><br>
+            <small class="text-muted" id="detail-splice-loss"></small>
         </div>
+        <div class="mb-2" style="font-size: 14px;">
+            Input Power ONT: <strong id="power-rx" class="text-primary" style="font-size: 1.1em;">-</strong> dBm
+        </div>
+        <div class="mb-2" style="font-size: 13px;">
+            Jalur: <span id="jalur-text" class="text-muted"></span>
+        </div>
+        <div id="output-power-list" class="mb-2" style="font-size:13px;"></div>
+        <div id="loss-status" class="mt-2"></div>
     </div>
+</div>
 
     <!-- Button toggle -->
     <button onclick="toggleStatusTable()" class="btn fw-bold"
@@ -357,9 +409,212 @@
                 }
                 return num;
             }
+            // Tambahkan di dalam jsPlumb.ready, sebelum createNodeElement:
+function getDeviceIcon(type) {
+    if (type === 'OLT') {
+        // SVG OLT
+        return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2"/>
+            <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A"/>
+            <circle cx="9" cy="18" r="1.5" fill="#FBBF24"/>
+            <circle cx="13" cy="18" r="1.5" fill="#FBBF24"/>
+            <circle cx="17" cy="18" r="1.5" fill="#FBBF24"/>
+            <rect x="22" y="16" width="8" height="4" rx="1" fill="#F1F5F9" stroke="#1E3A8A" stroke-width="1"/>
+        </svg>`;
+    } else if (type.startsWith('Splitter')) {
+        // SVG Splitter Box
+        return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="8" y="10" width="20" height="16" rx="3" fill="#10B981" stroke="#047857" stroke-width="2"/>
+            <line x1="18" y1="10" x2="18" y2="26" stroke="#047857" stroke-width="2"/>
+            <circle cx="14" cy="18" r="2" fill="#FBBF24"/>
+            <circle cx="22" cy="18" r="2" fill="#FBBF24"/>
+            <rect x="13" y="25" width="10" height="2" rx="1" fill="#047857"/>
+        </svg>`;
+    } else if (type === 'Client' || type === 'ONT') {
+        // SVG ONT/Client
+        return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42" stroke="#B45309" stroke-width="2"/>
+            <rect x="13" y="23" width="10" height="2" rx="1" fill="#B45309"/>
+            <circle cx="18" cy="18" r="2" fill="#FBBF24"/>
+        </svg>`;
+    }
+    return '';
+}
+
+/**
+ * Mengembalikan path lengkap dari root (OLT) ke node target.
+ * @param {string} targetId - id node tujuan.
+ * @returns {string} path dengan format "OLT → Splitter 1:8 → Splitter 1:16 → Client"
+ */
+function getFullPathToNode(targetId) {
+    let path = [];
+    let currId = targetId;
+    while (currId) {
+        const nodeEl = document.getElementById(currId);
+        if (!nodeEl) break;
+        // Ambil nama node dari <strong>
+        const nodeName = nodeEl.querySelector('strong')?.innerText || currId;
+        path.unshift(nodeName);
+
+        // Cari koneksi yang menuju ke node ini (parent)
+        const parentConn = lines.find(l => l.to === currId);
+        if (parentConn) {
+            currId = parentConn.from;
+        } else {
+            break; // Sudah di root (OLT)
+        }
+    }
+    return path.join(' → ');
+}
+
+// Ganti function createNodeElement menjadi:
+function createNodeElement(nodeData) {
+    const el = document.createElement('div');
+    el.classList.add('position-absolute', 'p-2', 'bg-white', 'border', 'rounded', 'text-center');
+    el.setAttribute('id', nodeData.id || `node-${nodeId++}`);
+
+    // Posisi node
+    el.style.left = (typeof nodeData.left === 'number') ?
+        `${nodeData.left}px` :
+        (typeof nodeData.left === 'string' && nodeData.left.endsWith('px')) ?
+        nodeData.left :
+        (!isNaN(Number(nodeData.left)) && nodeData.left !== '' && nodeData.left !== undefined) ?
+        `${Number(nodeData.left)}px` :
+        `${mapCanvas.clientWidth / 2 - 50}px`;
+
+    el.style.top = (typeof nodeData.top === 'number') ?
+        `${nodeData.top}px` :
+        (typeof nodeData.top === 'string' && nodeData.top.endsWith('px')) ?
+        nodeData.top :
+        (!isNaN(Number(nodeData.top)) && nodeData.top !== '' && nodeData.top !== undefined) ?
+        `${Number(nodeData.top)}px` :
+        `${mapCanvas.clientHeight / 2 - 25}px`;
+
+    // FIX: Pastikan power valid
+    const fixedPower = (!isNaN(parseFloat(nodeData.power))) ? parseFloat(nodeData.power).toFixed(2) : '0.00';
+    const fixedLoss = (!isNaN(parseFloat(nodeData.loss))) ? parseFloat(nodeData.loss).toFixed(2) : '0.00';
+
+    el.dataset.loss = fixedLoss;
+    el.dataset.power = fixedPower;
+    el.dataset.type = nodeData.type || 'Client';
+
+    // --- ICON DITAMBAHKAN DI SINI ---
+    el.innerHTML = `
+        <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
+        <div class="node-icon" style="height:36px; margin-bottom: 4px;">${getDeviceIcon(nodeData.type)}</div>
+        <strong>${nodeData.type}</strong>
+        <div class="output-power" style="font-size: 12px; color: green;">
+            ${fixedPower} dB
+        </div>`;
+
+    mapCanvas.appendChild(el);
+    jsPlumb.draggable(el, {
+        containment: 'parent'
+    });
+
+    // Tombol hapus node
+    el.querySelector('.btn-delete-node').onclick = (e) => {
+        e.stopPropagation();
+        Swal.fire({
+            title: 'Hapus node ini?',
+            text: 'Semua kabel yang terhubung ke node ini akan dihapus.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, hapus!',
+            confirmButtonColor: 'red',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const toDelete = lines.filter(conn => conn.from === el.id || conn.to === el.id);
+                toDelete.forEach(conn => jsPlumb.deleteConnection(conn.conn));
+                lines = lines.filter(conn => conn.from !== el.id && conn.to !== el.id);
+
+                jsPlumb.removeAllEndpoints(el);
+                mapCanvas.removeChild(el);
+                nodes = nodes.filter(n => n.id !== el.id);
+                if (selectedNode && selectedNode.id === el.id) selectedNode = null;
+
+                isTopologyChanged = true;
+                document.getElementById('info-card').classList.add('d-none');
+            }
+        });
+    };
+
+    // Event klik node → koneksi kabel
+    el.onclick = (e) => {
+        if (e.target.classList.contains('jsplumb-endpoint') || e.target.classList.contains('btn-delete-node')) return;
+        if (!selectedNode) {
+            selectedNode = el;
+            el.classList.add('border-primary');
+        } else if (selectedNode !== el) {
+            Swal.fire({
+                title: 'Connect Nodes',
+                html: `
+                    <div class="text-start mb-2">Cable Length (meters)</div>
+                    <input id="swal-length" type="number" class="swal2-input" value="50">
+                    <div class="text-start mb-2 mt-2">Cable Type</div>
+                    <select id="swal-cable" class="swal2-select">
+                        <option value="dropcore" selected>Dropcore (0.2 dB/km)</option>
+                        <option value="patchcord">Patchcord (0.3 dB/km)</option>
+                    </select>
+                `,
+                focusConfirm: false,
+                confirmButtonText: 'Connect',
+                showCancelButton: true,
+                cancelButtonText: 'Cancel',
+                preConfirm: () => {
+                    const length = validateNumberInput(document.getElementById(
+                        'swal-length').value, 'Cable Length');
+                    const type = document.getElementById('swal-cable').value;
+                    if (!length) return false;
+                    return {
+                        length,
+                        type
+                    };
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    const {
+                        length,
+                        type
+                    } = result.value;
+                    selectedCableLoss = type === 'dropcore' ? 0.2 / 1000 : 0.3 / 1000;
+                    selectedCableColor = type === 'dropcore' ? 'black' : 'yellow';
+                    selectedCableName = type === 'dropcore' ? 'Dropcore' : 'Patchcord';
+                    connectNodeElements(selectedNode, el, length);
+                    selectedNode.classList.remove('border-primary');
+                    selectedNode = null;
+                }
+            });
+        } else {
+            el.classList.remove('border-primary');
+            selectedNode = null;
+        }
+    };
+
+    // Tambahkan endpoint JSPlumb
+    const endpointCount = nodeData.type.startsWith('Splitter') ? parseInt(nodeData.type.split(' ')[1].split(':')[1]) || 4 : 1;
+    const anchors = nodeData.type.startsWith('Splitter') ?
+        Array.from({ length: endpointCount }, (_, i) => [(i + 1) / (endpointCount + 1), 1, 0, 1]) :
+        ['Top', 'Right', 'Bottom', 'Left'];
+
+    for (let i = 0; i < endpointCount; i++) {
+        jsPlumb.addEndpoint(el, {
+            anchor: anchors[i % anchors.length],
+            isSource: true,
+            isTarget: true,
+            maxConnections: -1,
+            endpoint: 'Blank',
+            paintStyle: { fill: '#3e4651' },
+            connector: ['Flowchart', { cornerRadius: 2, stub: 30 }]
+        });
+    }
+
+    return el;
+}
 
             // Helper: Membuat elemen node
-            function createNodeElement(nodeData) {
+function createNodeElement(nodeData) {
                 const el = document.createElement('div');
                 el.classList.add('position-absolute', 'p-2', 'bg-white', 'border', 'rounded', 'text-center');
                 el.setAttribute('id', nodeData.id || `node-${nodeId++}`);
@@ -393,10 +648,11 @@
 
                 el.innerHTML = `
                 <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
-                <strong>${nodeData.type}</strong>
-                <div class="output-power" style="font-size: 12px; color: green;">
-                    ${fixedPower} dB
-                </div>`;
+        <div class="node-icon" style="height:36px; margin-bottom: 4px;">${getDeviceIcon(nodeData.type)}</div>
+        <strong>${nodeData.type}</strong>
+        <div class="output-power" style="font-size: 12px; color: green;">
+            ${fixedPower} dB
+        </div>`;
 
                 mapCanvas.appendChild(el);
                 jsPlumb.draggable(el, {
@@ -703,8 +959,20 @@
                 document.getElementById('info-card').classList.remove('d-none');
                 document.getElementById('total-loss').innerText = totalLoss.toFixed(2);
                 document.getElementById('power-rx').innerText = powerRx.toFixed(2);
-                document.getElementById('jalur-text').innerText =
-                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
+               document.getElementById('jalur-text').innerText =
+    getFullPathToNode(target.id);
+    // Update output power per node di jalur (dari OLT ke ONT)
+const pathNodeIds = getFullPathNodeIds(target.id); // Fungsi array id node pada path
+let outputListHtml = '';
+pathNodeIds.forEach(nodeId=>{
+    const nodeEl = document.getElementById(nodeId);
+    if(nodeEl){
+        const name = nodeEl.querySelector('strong')?.innerText || nodeId;
+        const power = nodeEl.dataset.power || '-';
+        outputListHtml += `<div class="output-power-node"><span class="node-name">${name}</span><span>=</span><span class="node-power">${power} dB</span></div>`;
+    }
+});
+document.getElementById('output-power-list').innerHTML = outputListHtml;
                 actions.push({
                     type: 'add-connection',
                     conn,
@@ -731,6 +999,8 @@
                     strokeWidth: 2,
                     dashstyle: link.cable === 'Patchcord' ? '4 2' : undefined
                 };
+
+                const totalSplicing = parseInt(document.getElementById('splicing')?.value) || 0;
 
                 const conn = jsPlumb.connect({
                     source,
@@ -841,13 +1111,16 @@
                 } else {
                     powerRx = parseFloat(target.dataset.power || 0); // jaga-jaga kalau memang udah diset
                 }
-
+                // Update detail cable loss dan splice loss
+document.getElementById('detail-cable-loss').innerText = 
+    `Total cable loss: ${length}m x ${(selectedCableLoss).toFixed(4)} dB/m = ${(length * selectedCableLoss).toFixed(3)} dB`;
+document.getElementById('detail-splice-loss').innerText = 
+    `Total loss splicing: ${totalSplicing} x 0.1dB = ${(totalSplicing * 0.1).toFixed(2)} dB`;
                 document.getElementById('info-card')?.classList.remove('d-none');
                 document.getElementById('total-loss').innerText = lossCable.toFixed(2);
                 document.getElementById('power-rx').innerText = powerRx.toFixed(2);
-                document.getElementById('jalur-text').innerText =
-                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
-
+               document.getElementById('jalur-text').innerText =
+    getFullPathToNode(target.id);
                 actions.push({
                     type: 'add-connection',
                     conn,
@@ -1024,8 +1297,8 @@
                 }
 
                 document.getElementById('power-rx').innerText = powerRx.toFixed(2);
-                document.getElementById('jalur-text').innerText =
-                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
+               document.getElementById('jalur-text').innerText =
+    getFullPathToNode(target.id);
             });
 
             /**
