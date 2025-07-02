@@ -7,9 +7,9 @@
             <!-- konten sidebar -->
             <a href="{{ route('lab') }}" class="btn w-100 text-white fw-bold"
                 style="background: linear-gradient(87deg, #627594 0, #8898aa 100%);
-        border-radius: 25px;
-        border: none;
-        pointer-events: none;">
+           border-radius: 25px;
+           border: none;
+           pointer-events: none;">
                 <i class="bi bi-person-circle me-1"></i>
                 {{ $lab['author'] }}
             </a>
@@ -186,6 +186,7 @@
         }
     </style>
 
+    <!-- Informasi Loss Panel -->
     <div id="info-card" class="card shadow-sm border border-info d-none"
         style="position: fixed; top: 360px; right: 20px; min-width: 280px; max-width:340px; transition: all 0.3s ease-in-out; z-index: 10;">
         <div class="card-body px-3 py-2">
@@ -206,9 +207,8 @@
             </div>
             <div id="output-power-list" class="mb-2" style="font-size:13px;"></div>
             <div id="loss-status" class="mt-2"></div>
+        </div>
     </div>
-    </div>
-</div>
 
     <!-- Button toggle -->
     <button onclick="toggleStatusTable()" class="btn fw-bold"
@@ -290,8 +290,7 @@
 
                 Toast.fire({
                     icon: 'success',
-                    title: '{{ session('
-                                                                                                                                                                                                                                                                                                    success ') }}'
+                    title: '{{ session('success') }}'
                 });
             });
         </script>
@@ -372,6 +371,8 @@
 @endsection
 {{-- Script untuk membuat dan mengedit canvas --}}
 @push('scripts')
+    <!-- Ganti LeaderLine dengan jsPlumb -->
+    <script src="https://unpkg.com/jsplumb@2.15.6/dist/js/jsplumb.min.js"></script>
     <script>
         let lab = {
             name: '{{ $lab['name'] ?? '' }}',
@@ -391,11 +392,9 @@
         let selectedCableName = 'Dropcore';
         let actions = [];
         let isTopologyChanged = false;
-        let undoLocked = false; // Tambahkan flag kunci undo
         let nodes = []; // {id, type, loss, power, top, left}
         let lines = []; // {from, to, cable, loss, length, conn(jsPlumb)}
 
-        // Helper: Mendapatkan warna kabel
         function getColorByCableName(name) {
             if (!name) return 'black';
             name = name.toLowerCase();
@@ -403,6 +402,125 @@
             if (name.includes('patchcord')) return 'yellow';
             return 'black';
         }
+
+        // 💡 Fungsi untuk sambung node
+        function connectNodeElementsByData(link, options = {}) {
+            const source = document.getElementById(link.from);
+            const target = document.getElementById(link.to);
+
+            if (!source || !target) {
+                console.warn(`❌ Gagal sambung: ${link.from} -> ${link.to}`);
+                return;
+            }
+
+            console.log(`🔗 Sambung: ${link.from} → ${link.to} (${link.cable}, loss: ${link.loss})`);
+
+            const color = getColorByCableName(link.cable);
+            const lossCable = parseFloat(link.loss || 0);
+            const paint = {
+                stroke: color,
+                strokeWidth: 2,
+                dashstyle: link.cable === 'Patchcord' ? '4 2' : undefined
+            };
+
+            const conn = jsPlumb.connect({
+                source,
+                target,
+                anchors: ['AutoDefault', 'AutoDefault'],
+                endpoint: 'Blank',
+                connector: ['Flowchart', {
+                    cornerRadius: 2,
+                    stub: 30
+                }],
+                paintStyle: paint,
+                overlays: [
+                    ['Label', {
+                        label: `-${lossCable.toFixed(2)} dB`,
+                        location: 0.5,
+                        cssClass: 'myLabel',
+                        css: {
+                            color: 'red',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            background: 'white',
+                            padding: '2px 4px',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd'
+                        }
+                    }],
+                    ['Arrow', {
+                        width: 12,
+                        length: 12,
+                        location: 1,
+                        foldback: 0.7,
+                        paintStyle: {
+                            fill: color
+                        }
+                    }]
+                ]
+            });
+
+            // ... tombol hapus dan contextmenu tetap sama
+
+            lines.push({
+                from: source.id,
+                to: target.id,
+                cable: link.cable,
+                loss: lossCable,
+                length: link.length,
+                conn
+            });
+
+            // Power Handling
+            const fromPower = options.skipPowerCalc ?
+                parseFloat(source.dataset.power || 0) :
+                parseFloat(source.dataset.power || inputPower?.value || 0);
+
+            let powerRx = fromPower - lossCable;
+
+            if (!options.skipPowerCalc) {
+                target.dataset.power = powerRx.toFixed(2);
+                if (target.querySelector('.output-power')) {
+                    target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
+                }
+            }
+
+            actions.push({
+                type: 'add-connection',
+                conn,
+                from: source.id,
+                to: target.id
+            });
+
+            isTopologyChanged = true;
+            console.log('✅ Koneksi berhasil!');
+        }
+
+        // 🔄 Auto-render saat pertama kali buka lab
+        setTimeout(() => {
+            console.log('📦 Mulai render dari Blade...');
+            console.log(`🧪 Lab: ${lab.name} by ${lab.author}`);
+            console.log(`⚡ Default power: ${defaultPower}`);
+            console.log(`🧱 Jumlah Node: ${rawNodes.length}`);
+            console.log(`🔌 Jumlah Koneksi: ${rawConnections.length}`);
+
+            rawNodes.forEach(node => addNodeFromDB(node));
+
+            setTimeout(() => {
+                rawConnections.forEach(conn => {
+                    connectNodeElementsByData(conn, {
+                        skipPowerCalc: true
+                    });
+                });
+
+                inputPower.value = defaultPower;
+                jsPlumb.repaintEverything();
+
+                // ✅ Pertama kali buka, anggap belum ada perubahan
+                isTopologyChanged = false;
+                console.log('✅ Topologi siap dirender!');
+            }, 300);
+        }, 100);
 
         jsPlumb.ready(() => {
             jsPlumb.setContainer(mapCanvas);
@@ -412,8 +530,8 @@
                 return node.dataset.type || (node.querySelector('strong')?.innerText || '');
             }
 
-            // Helper: Validasi input
-            function validateNumberInput(value, fieldName = "Value") {
+            // Helper: Validasi input numerik
+            function validateNumberInput(value, fieldName) {
                 const num = parseFloat(value);
                 if (isNaN(num) || num < 0) {
                     Swal.fire({
@@ -425,113 +543,8 @@
                 }
                 return num;
             }
-            // Tambahkan di dalam jsPlumb.ready, sebelum createNodeElement:
-            function getDeviceIcon(type) {
-                if (type === 'OLT') {
-                    return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2"/>
-                        <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A"/>
-                        <circle cx="9" cy="18" r="1.5" fill="#FBBF24"/>
-                        <circle cx="13" cy="18" r="1.5" fill="#FBBF24"/>
-                        <circle cx="17" cy="18" r="1.5" fill="#FBBF24"/>
-                        <rect x="22" y="16" width="8" height="4" rx="1" fill="#F1F5F9" stroke="#1E3A8A" stroke-width="1"/>
-                    </svg>`;
-                } else if (type && type.startsWith('Splitter')) {
-                    return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect x="8" y="10" width="20" height="16" rx="3" fill="#10B981" stroke="#047857" stroke-width="2"/>
-                        <line x1="18" y1="10" x2="18" y2="26" stroke="#047857" stroke-width="2"/>
-                        <circle cx="14" cy="18" r="2" fill="#FBBF24"/>
-                        <circle cx="22" cy="18" r="2" fill="#FBBF24"/>
-                        <rect x="13" y="25" width="10" height="2" rx="1" fill="#047857"/>
-                    </svg>`;
-                } else if (type === 'Client' || type === 'ONT') {
-                    return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42" stroke="#B45309" stroke-width="2"/>
-                        <rect x="13" y="23" width="10" height="2" rx="1" fill="#B45309"/>
-                        <circle cx="18" cy="18" r="2" fill="#FBBF24"/>
-                    </svg>`;
-                }
-                return '';
-            }
 
-            function getFullPathNodeIds(targetId) {
-                let ids = [];
-                let currId = targetId;
-                while (currId) {
-                    ids.unshift(currId);
-                    const parentConn = lines.find(l => l.to === currId);
-                    currId = parentConn ? parentConn.from : null;
-                }
-                return ids;
-            }
-
-            /**
-             * Mengembalikan path lengkap dari root (OLT) ke node target.
-             * @param {string} targetId - id node tujuan.
-             * @returns {string} path dengan format "OLT → Splitter 1:8 → Splitter 1:16 → Client"
-             */
-            // Helper: Path OLT ke ONT/Client dalam string
-            function getFullPathToNode(targetId) {
-                let path = [];
-                let currId = targetId;
-                while (currId) {
-                    const nodeEl = document.getElementById(currId);
-                    if (!nodeEl) break;
-                    const nodeName = nodeEl.querySelector('strong')?.innerText || currId;
-                    path.unshift(nodeName);
-                    const parentConn = lines.find(l => l.to === currId);
-                    currId = parentConn ? parentConn.from : null;
-                }
-                return path.join(' → ');
-            }
-
-             // === ADVANCED DELETE UNTUK RESTORE/UNDO ===
-            window.deleteNodeWithAction = function(nodeEl) {
-                // Simpan semua koneksi terkait node ini
-                const relatedConnections = lines.filter(conn => conn.from === nodeEl.id || conn.to === nodeEl.id);
-                // Simpan data node
-                const nodeData = nodes.find(n => n.id === nodeEl.id);
-                actions.push({
-                    type: 'delete-node',
-                    node: {...nodeData},
-                    elHTML: nodeEl.outerHTML,
-                    connections: relatedConnections.map(conn => ({
-                        from: conn.from,
-                        to: conn.to,
-                        cable: conn.cable,
-                        loss: conn.loss,
-                        length: conn.length
-                    }))
-                });
-                // Hapus semua kabel terkait
-                relatedConnections.forEach(conn => jsPlumb.deleteConnection(conn.conn));
-                lines = lines.filter(conn => conn.from !== nodeEl.id && conn.to !== nodeEl.id);
-                jsPlumb.removeAllEndpoints(nodeEl);
-                mapCanvas.removeChild(nodeEl);
-                nodes = nodes.filter(n => n.id !== nodeEl.id);
-                if (selectedNode && selectedNode.id === nodeEl.id) selectedNode = null;
-                isTopologyChanged = true;
-                document.getElementById('info-card').classList.add('d-none');
-            };
-
-            window.deleteConnectionWithAction = function(connObj) {
-                actions.push({
-                    type: 'delete-connection',
-                    connection: {
-                        from: connObj.from,
-                        to: connObj.to,
-                        cable: connObj.cable,
-                        loss: connObj.loss,
-                        length: connObj.length
-                    }
-                });
-                jsPlumb.deleteConnection(connObj.conn);
-                lines = lines.filter(l => l.conn !== connObj.conn);
-                isTopologyChanged = true;
-            };
-
-
-            // Ganti function createNodeElement menjadi:
+            // Helper: Membuat elemen node
             function createNodeElement(nodeData) {
                 const el = document.createElement('div');
                 el.classList.add('position-absolute', 'p-2', 'bg-white', 'border', 'rounded', 'text-center');
@@ -541,6 +554,7 @@
                 }
                 el.setAttribute('id', nodeData.id);
 
+                // Posisi node
                 el.style.left = (typeof nodeData.left === 'number') ?
                     `${nodeData.left}px` :
                     (typeof nodeData.left === 'string' && nodeData.left.endsWith('px')) ?
@@ -557,6 +571,7 @@
                     `${Number(nodeData.top)}px` :
                     `${mapCanvas.clientHeight / 2 - 25}px`;
 
+                // FIX: Pastikan power valid
                 const fixedPower = (!isNaN(parseFloat(nodeData.power))) ? parseFloat(nodeData.power).toFixed(2) :
                     '0.00';
                 const fixedLoss = (!isNaN(parseFloat(nodeData.loss))) ? parseFloat(nodeData.loss).toFixed(2) :
@@ -567,12 +582,11 @@
                 el.dataset.type = nodeData.type || 'Client';
 
                 el.innerHTML = `
-            <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
-            <div class="node-icon" style="height:36px; margin-bottom: 4px;">${getDeviceIcon(nodeData.type)}</div>
-            <strong>${nodeData.type}</strong>
-            <div class="output-power" style="font-size: 12px; color: green;">
-                ${fixedPower} dB
-            </div>`;
+                <button class="btn btn-danger btn-sm btn-delete-node" style="position: absolute; top: -8px; right: -8px; z-index: 2; border-radius: 50%; width: 22px; height: 22px; padding: 0; font-size: 14px; line-height: 1;" title="Hapus Node">×</button>
+                <strong>${nodeData.type}</strong>
+                <div class="output-power" style="font-size: 12px; color: green;">
+                    ${fixedPower} dB
+                </div>`;
 
                 mapCanvas.appendChild(el);
                 jsPlumb.draggable(el, {
@@ -592,7 +606,18 @@
                         cancelButtonText: 'Batal'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.deleteNodeWithAction(el);
+                            const toDelete = lines.filter(conn => conn.from === el.id || conn.to === el
+                                .id);
+                            toDelete.forEach(conn => jsPlumb.deleteConnection(conn.conn));
+                            lines = lines.filter(conn => conn.from !== el.id && conn.to !== el.id);
+
+                            jsPlumb.removeAllEndpoints(el);
+                            mapCanvas.removeChild(el);
+                            nodes = nodes.filter(n => n.id !== el.id);
+                            if (selectedNode && selectedNode.id === el.id) selectedNode = null;
+
+                            isTopologyChanged = true;
+                            document.getElementById('info-card').classList.add('d-none');
                         }
                     });
                 };
@@ -608,14 +633,14 @@
                         Swal.fire({
                             title: 'Connect Nodes',
                             html: `
-                            <div class="text-start mb-2">Cable Length (meters)</div>
-                            <input id="swal-length" type="number" class="swal2-input" value="50">
-                            <div class="text-start mb-2 mt-2">Cable Type</div>
-                            <select id="swal-cable" class="swal2-select">
-                                <option value="dropcore" selected>Dropcore (0.2 dB/km)</option>
-                                <option value="patchcord">Patchcord (0.3 dB/km)</option>
-                            </select>
-                        `,
+                    <div class="text-start mb-2">Cable Length (meters)</div>
+                    <input id="swal-length" type="number" class="swal2-input" value="50">
+                    <div class="text-start mb-2 mt-2">Cable Type</div>
+                    <select id="swal-cable" class="swal2-select">
+                        <option value="dropcore" selected>Dropcore (0.2 dB/km)</option>
+                        <option value="patchcord">Patchcord (0.3 dB/km)</option>
+                    </select>
+                `,
                             focusConfirm: false,
                             confirmButtonText: 'Connect',
                             showCancelButton: true,
@@ -631,24 +656,27 @@
                                 };
                             }
                         }).then(result => {
-                            if (result.isConfirmed && selectedNode && selectedNode !== el) {
-                                selectedCableLoss = result.value.type === 'dropcore' ? 0.2 / 1000 :
-                                    0.3 / 1000;
-                                selectedCableColor = result.value.type === 'dropcore' ? 'black' :
-                                    'yellow';
-                                selectedCableName = result.value.type === 'dropcore' ? 'Dropcore' :
-                                    'Patchcord';
-                                connectNodeElements(selectedNode, el, result.value.length);
+                            if (result.isConfirmed) {
+                                const {
+                                    length,
+                                    type
+                                } = result.value;
+                                selectedCableLoss = type === 'dropcore' ? 0.2 / 1000 : 0.3 / 1000;
+                                selectedCableColor = type === 'dropcore' ? 'black' : 'yellow';
+                                selectedCableName = type === 'dropcore' ? 'Dropcore' : 'Patchcord';
+                                connectNodeElements(selectedNode, el, length);
+                                selectedNode.classList.remove('border-primary');
+                                selectedNode = null;
                             }
-                            if (selectedNode) selectedNode.classList.remove('border-primary');
-                            selectedNode = null;
                         });
                     } else {
                         el.classList.remove('border-primary');
                         selectedNode = null;
                     }
+                    isTopologyChanged = true;
                 };
 
+                // Tambahkan endpoint JSPlumb
                 const endpointCount = nodeData.type.startsWith('Splitter') ? parseInt(nodeData.type.split(' ')[1]
                     .split(':')[1]) || 4 : 1;
                 const anchors = nodeData.type.startsWith('Splitter') ?
@@ -751,7 +779,6 @@
              */
             function connectNodeElements(source, target, length) {
                 const lossCable = length * selectedCableLoss;
-                console.log(lossCable); // → 0.1 (di console)
                 const lossTarget = parseFloat(target.dataset.loss || 0);
                 const totalConnectors = validateNumberInput(document.getElementById('connectors')?.value,
                     'Connectors') || 0;
@@ -809,14 +836,8 @@
                         }]
                     ]
                 });
-                conn._customMeta = {
-                    loss: lossCable,
-                    name: selectedCableName,
-                    color: selectedCableColor,
-                    length: length
-                };
 
-                // Overlay hapus kabel
+                // 🔥 Tambahin overlay tombol hapus setelah koneksi dibuat
                 conn.addOverlay(['Custom', {
                     create: function() {
                         const btn = document.createElement('div');
@@ -856,6 +877,7 @@
                     id: 'delete-button'
                 }]);
 
+
                 conn.bind('contextmenu', (conn, e) => {
                     e.preventDefault();
                     if (confirm('Hapus kabel ini?')) {
@@ -874,222 +896,20 @@
                     conn
                 });
 
-                // Update info loss panel
                 document.getElementById('info-card').classList.remove('d-none');
                 document.getElementById('total-loss').innerText = totalLoss.toFixed(2);
                 document.getElementById('power-rx').innerText = powerRx.toFixed(2);
-                document.getElementById('jalur-text').innerText = getFullPathToNode(target.id);
-
-                // Output power list
-                const pathNodeIds = getFullPathNodeIds(target.id);
-                let outputListHtml = '';
-                pathNodeIds.forEach(nodeId => {
-                    const nodeEl = document.getElementById(nodeId);
-                    if (nodeEl) {
-                        const name = nodeEl.querySelector('strong')?.innerText || nodeId;
-                        const power = nodeEl.dataset.power || '-';
-                        outputListHtml +=
-                            `<div class="output-power-node"><span class="node-name">${name}</span><span>=</span><span class="node-power">${power} dB</span></div>`;
-                    }
-                });
-                document.getElementById('output-power-list').innerHTML = outputListHtml;
-
-                actions.push({
-                    type: 'add-connection',
-                    conn,
-                    from: source.id,
-                    to: target.id
-                });
-                isTopologyChanged = true;
-            }
-
-            function connectNodeElementsByData(link, options = {}) {
-                const source = document.getElementById(link.from);
-                const target = document.getElementById(link.to);
-
-                if (!source || !target) return;
-
-                const length = parseFloat(link.length || 0);
-                const cableType = link.cable || "Dropcore";
-                const color = getColorByCableName(cableType);
-
-                let cableLoss = cableType === 'Patchcord' ? 0.3 / 1000 : 0.2 / 1000;
-                let lossCable = parseFloat(link.loss);
-                if (!lossCable || lossCable === 0) {
-                    lossCable = length * cableLoss;
-                }
-
-                const paint = {
-                    stroke: color,
-                    strokeWidth: 2,
-                    dashstyle: cableType === 'Patchcord' ? '4 2' : undefined
-                };
-
-                const totalSplicing = parseInt(document.getElementById('splicing')?.value) || 0;
-
-                const connOptions = {
-                    source,
-                    target,
-                    anchors: ['AutoDefault', 'AutoDefault'],
-                    endpoint: 'Blank',
-                    connector: ['Flowchart', {
-                        cornerRadius: 2,
-                        stub: 30
-                    }],
-                    paintStyle: paint,
-                    overlays: [
-                        ['Label', {
-                            label: `-${lossCable.toFixed(2)} dB`,
-                            location: 0.5,
-                            cssClass: 'myLabel',
-                            css: {
-                                color: 'red',
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                background: 'white',
-                                padding: '2px 4px',
-                                borderRadius: '4px',
-                                border: '1px solid #ddd'
-                            }
-                        }],
-                        ['Arrow', {
-                            width: 12,
-                            length: 12,
-                            location: 1,
-                            foldback: 0.7,
-                            paintStyle: {
-                                fill: color
-                            }
-                        }]
-                    ],
-                    _customMeta: { // <-- set di sini!
-                        loss: lossCable,
-                        name: cableType,
-                        color: color,
-                        length: length
-                    }
-                };
-                const conn = jsPlumb.connect(connOptions);
-
-                conn.addOverlay(['Custom', {
-                    create: function() {
-                        const btn = document.createElement('div');
-                        btn.innerHTML = '&times;';
-                        btn.title = 'Hapus kabel ini';
-                        btn.style.background = 'red';
-                        btn.style.color = 'white';
-                        btn.style.width = '16px';
-                        btn.style.height = '16px';
-                        btn.style.display = 'flex';
-                        btn.style.alignItems = 'center';
-                        btn.style.justifyContent = 'center';
-                        btn.style.borderRadius = '50%';
-                        btn.style.cursor = 'pointer';
-                        btn.style.fontSize = '12px';
-                        btn.style.boxShadow = '0 0 3px rgba(0,0,0,0.3)';
-                        btn.style.zIndex = '9999';
-                        btn.onclick = (e) => {
-                            e.stopPropagation();
-                            Swal.fire({
-                                title: 'Hapus Kabel Ini?',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: 'Ya, hapus!',
-                                cancelButtonText: 'Batal'
-                            }).then(result => {
-                                if (result.isConfirmed) {
-                                    // Cari connObj dari lines
-                                    const connObj = lines.find(l => l.conn === conn);
-                                    if (connObj) window.deleteConnectionWithAction(connObj);
-                                }
-                            });
-                        };
-                        return btn;
-                    },
-                    location: 0.75,
-                    id: 'delete-button'
-                }]);
-
-                conn.bind('contextmenu', (conn, e) => {
-                    e.preventDefault();
-                    if (confirm('Hapus kabel ini?')) {
-                        jsPlumb.deleteConnection(conn);
-                        lines = lines.filter(l => l.conn !== conn);
-                        isTopologyChanged = true;
-                    }
-                });
-
-                lines.push({
-                    from: source.id,
-                    to: target.id,
-                    cable: cableType,
-                    loss: lossCable,
-                    length: length,
-                    conn
-                });
-
-                // ⬇️ POWER HANDLING
-                const fromPower = options.skipPowerCalc ?
-                    parseFloat(source.dataset.power || 0) :
-                    parseFloat(source.dataset.power || inputPower?.value || 0);
-
-                let powerRx = fromPower - lossCable;
-
-                if (!options.skipPowerCalc) {
-                    target.dataset.power = powerRx.toFixed(2);
-                    if (target.querySelector('.output-power')) {
-                        target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
-                    }
-                } else {
-                    powerRx = parseFloat(target.dataset.power || 0); // jaga-jaga kalau memang udah diset
-                }
-
-                // Update detail cable loss dan splice loss
-                document.getElementById('detail-cable-loss').innerText =
-                    `Total cable loss: ${length}m x ${(cableLoss).toFixed(4)} dB/m = ${(length * cableLoss).toFixed(3)} dB`;
-                document.getElementById('detail-splice-loss').innerText =
-                    `Total loss splicing: ${totalSplicing} x 0.1dB = ${(totalSplicing * 0.1).toFixed(2)} dB`;
-                document.getElementById('info-card')?.classList.remove('d-none');
-                document.getElementById('total-loss').innerText = lossCable.toFixed(2);
-                document.getElementById('power-rx').innerText = powerRx.toFixed(2);
                 document.getElementById('jalur-text').innerText =
-                    getFullPathToNode(target.id);
+                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
                 actions.push({
                     type: 'add-connection',
                     conn,
                     from: source.id,
                     to: target.id
                 });
-
                 isTopologyChanged = true;
-                console.log('✅ Koneksi berhasil dibuat!', conn);
             }
 
-            // 🔄 Auto-render saat pertama kali buka lab
-            setTimeout(() => {
-                console.log('📦 Mulai render dari Blade...');
-                console.log(`🧪 Lab: ${lab.name} by ${lab.author}`);
-                console.log(`⚡ Default power: ${defaultPower}`);
-                console.log(`🧱 Jumlah Node: ${rawNodes.length}`);
-                console.log(`🔌 Jumlah Koneksi: ${rawConnections.length}`);
-
-                rawNodes.forEach(node => addNodeFromDB(node));
-
-                setTimeout(() => {
-                    rawConnections.forEach(conn => {
-                        connectNodeElementsByData(conn, {
-                            skipPowerCalc: true
-                        });
-                    });
-
-                    inputPower.value = defaultPower;
-                    jsPlumb.repaintEverything();
-
-                    // ✅ Pertama kali buka, anggap belum ada perubahan
-                    isTopologyChanged = false;
-                    console.log('✅ Topologi siap dirender!');
-                }, 300);
-            }, 100);
 
             jsPlumb.bind('beforeDrop', (info) => {
                 return new Promise((resolve) => {
@@ -1103,7 +923,11 @@
                         <option value="dropcore" selected>Dropcore (0.2 dB/km)</option>
                         <option value="patchcord">Patchcord (0.3 dB/km)</option>
                     </select>
-                `, // isian swal
+                `,
+                        focusConfirm: false,
+                        confirmButtonText: 'Hubungkan',
+                        showCancelButton: true,
+                        cancelButtonText: 'Batal',
                         preConfirm: () => {
                             const length = validateNumberInput(document.getElementById(
                                 'swal-length').value, 'Cable Length');
@@ -1120,39 +944,145 @@
                                 length,
                                 type
                             } = result.value;
-
                             selectedCableLoss = type === 'dropcore' ? 0.2 / 1000 : 0.3 /
                                 1000;
                             selectedCableColor = type === 'dropcore' ? 'black' : 'yellow';
                             selectedCableName = type === 'dropcore' ? 'Dropcore' :
                                 'Patchcord';
-
-                            // ❗⛔ JANGAN LANJUTKAN DARI JSPLUMB
-                            // ❗✅ KITA YANG HANDLE MANUAL
-                            connectNodeElements(info.source, info.target, length);
-
-                            resolve(false); // BATALKAN connect default JSPlumb
+                            info.connection._customMeta = {
+                                length,
+                                type,
+                                color: selectedCableColor,
+                                name: selectedCableName,
+                                loss: length * selectedCableLoss
+                            };
+                            resolve(true);
                         } else {
-                            resolve(false); // User batalin
+                            resolve(false);
                         }
                     });
                 });
+            });
+
+            jsPlumb.bind('connection', (info) => {
+                const conn = info.connection;
+                const meta = conn._customMeta || {};
+                const lossCable = meta.loss || 0;
+                const color = meta.color || 'black';
+
+                conn.setPaintStyle({
+                    stroke: color,
+                    strokeWidth: 2,
+                    dashstyle: meta.name === 'Patchcord' ? '4 2' : undefined
+                });
+                conn.connector.setOptions({
+                    type: 'Flowchart',
+                    cornerRadius: 2,
+                    stub: 30
+                });
+
+                conn.removeAllOverlays();
+                conn.addOverlay(['Label', {
+                    label: `-${lossCable.toFixed(2)} dB`,
+                    location: 0.5,
+                    cssClass: 'myLabel',
+                    css: {
+                        color: 'red',
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        background: 'white',
+                        padding: '2px 4px',
+                        borderRadius: '4px',
+                        border: '1px solid #ddd'
+                    }
+                }]);
+
+                conn.addOverlay(['Arrow', {
+                    width: 12,
+                    length: 12,
+                    location: 1,
+                    foldback: 0.7,
+                    paintStyle: {
+                        fill: color
+                    }
+                }]);
+
+                // 🔥 Tambahan tombol X hapus kabel
+                conn.addOverlay(['Custom', {
+                    create: function() {
+                        const btn = document.createElement('div');
+                        btn.innerHTML = '&times;';
+                        btn.title = 'Hapus kabel ini';
+                        btn.style.position = 'relative';
+                        btn.style.zIndex = '9999';
+                        btn.style.background = 'red';
+                        btn.style.color = 'white';
+                        btn.style.width = '16px';
+                        btn.style.height = '16px';
+                        btn.style.display = 'flex';
+                        btn.style.alignItems = 'center';
+                        btn.style.justifyContent = 'center';
+                        btn.style.borderRadius = '50%';
+                        btn.style.cursor = 'pointer';
+                        btn.style.fontSize = '12px';
+                        btn.style.boxShadow = '0 0 3px rgba(0,0,0,0.3)';
+                        btn.onclick = (e) => {
+                            e.stopPropagation();
+                            Swal.fire({
+                                title: 'Hapus Kabel Ini?',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Ya, hapus!',
+                                cancelButtonText: 'Batal'
+                            }).then(result => {
+                                if (result.isConfirmed) {
+                                    jsPlumb.deleteConnection(conn);
+                                    lines = lines.filter(l => l.conn !== conn);
+                                    isTopologyChanged = true;
+                                }
+                            });
+                        };
+                        return btn;
+                    },
+                    location: 0.75,
+                    id: 'delete-button'
+                }]);
+
+                const source = conn.source;
+                const target = conn.target;
+                lines.push({
+                    from: source.id,
+                    to: target.id,
+                    cable: meta.name || selectedCableName,
+                    loss: lossCable,
+                    length: meta.length || 0,
+                    conn
+                });
+
+                document.getElementById('info-card').classList.remove('d-none');
+                document.getElementById('total-loss').innerText = lossCable.toFixed(2);
+
+                let powerRx;
+
+                if (!options.skipPowerCalc) {
+                    powerRx = fromPower - lossCable;
+                    target.dataset.power = powerRx.toFixed(2);
+                    if (target.querySelector('.output-power')) {
+                        target.querySelector('.output-power').innerText = `${powerRx.toFixed(2)} dB`;
+                    }
+                } else {
+                    powerRx = parseFloat(target.dataset.power || 0); // Ambil dari data yg udah diimport
+                }
+
+                document.getElementById('power-rx').innerText = powerRx.toFixed(2);
+                document.getElementById('jalur-text').innerText =
+                    `${source.querySelector('strong').innerText} → ${target.querySelector('strong').innerText}`;
             });
 
             /**
              * Menghapus aksi terakhir (undo).
              */
             window.undoAction = function() {
-                if (undoLocked) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Undo tidak bisa dilakukan setelah save!',
-                        showConfirmButton: false,
-                        timer: 2000,
-                        timerProgressBar: true
-                    });
-                    return;
-                }
                 if (actions.length === 0) return;
                 const last = actions.pop();
                 if (last.type === 'add-connection') {
@@ -1173,39 +1103,6 @@
                     jsPlumb.deleteEveryEndpoint(node);
                     jsPlumb.remove(node);
                     nodes = nodes.filter(n => n.id !== node.id);
-                } else if (last.type === 'delete-node') {
-                    // Restore node ke DOM
-                    const parser = new DOMParser();
-                    const nodeDoc = parser.parseFromString(last.elHTML, 'text/html');
-                    const restoredEl = nodeDoc.body.firstChild;
-                    if (!document.getElementById(restoredEl.id)) {
-                        mapCanvas.appendChild(restoredEl);
-                        nodes.push(last.node);
-                        jsPlumb.draggable(restoredEl, { containment: 'parent' });
-                        // Re-attach tombol hapus node
-                        restoredEl.querySelector('.btn-delete-node').onclick = (e) => {
-                            e.stopPropagation();
-                            Swal.fire({
-                                title: 'Hapus node ini?',
-                                text: 'Semua kabel yang terhubung ke node ini akan dihapus.',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: 'Ya, hapus!',
-                                confirmButtonColor: 'red',
-                                cancelButtonText: 'Batal'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.deleteNodeWithAction(restoredEl);
-                                }
-                            });
-                        };
-                    }
-                    // Restore semua koneksi
-                    last.connections.forEach(conn => {
-                        window.connectNodeElementsByData(conn, { skipPowerCalc: true });
-                    });
-                } else if (last.type === 'delete-connection') {
-                    window.connectNodeElementsByData(last.connection, { skipPowerCalc: true });
                 }
                 document.getElementById('info-card').classList.add('d-none');
                 isTopologyChanged = true;
@@ -1313,7 +1210,7 @@
                     },
                     overlays: [
                         ['Label', {
-                            label: `-${(conn.loss || 0).toFixed(3)} dB`,
+                            label: `-${(conn.loss || 0).toFixed(2)} dB`,
                             location: 0.5,
                             cssClass: 'myLabel',
                             css: {
@@ -1323,14 +1220,6 @@
                         }]
                     ]
                 });
-
-                // Tambahkan ini!
-                jsConn._customMeta = {
-                    loss: conn.loss,
-                    name: conn.cable,
-                    color: color,
-                    length: conn.length
-                };
 
                 jsConn.bind('contextmenu', (conn, e) => {
                     e.preventDefault();
@@ -1419,7 +1308,7 @@
                     return;
                 }
 
-                const filename = `topologi-${(topology.name || 'export').replace(/\\s+/g, '_')}.json`;
+                const filename = `topologi-${(topology.name || 'export').replace(/\s+/g, '_')}.json`;
                 const dataStr =
                     `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(topology, null, 2))}`;
 
@@ -1505,81 +1394,6 @@
                 document.getElementById('import-file').value = ''; // Reset file input sesuai ID input
             };
 
-            window.undoAction = function() {
-                        if (undoLocked) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Undo tidak bisa dilakukan setelah save!',
-                            showConfirmButton: false,
-                            timer: 2000,
-                            timerProgressBar: true
-                        });
-                        return;
-                    }
-                    if (actions.length === 0) return;
-                    const last = actions.pop();
-                    if (last.type === 'add-connection') {
-                        const lineIndex = lines.findIndex(l => l.conn === last.conn);
-                        if (lineIndex !== -1) {
-                            jsPlumb.deleteConnection(lines[lineIndex].conn);
-                            lines.splice(lineIndex, 1);
-                        }
-                    } else if (last.type === 'add-node') {
-                        const node = last.node;
-                        lines = lines.filter(conn => {
-                            if (conn.from === node.id || conn.to === node.id) {
-                                jsPlumb.deleteConnection(conn.conn);
-                                return false;
-                            }
-                            return true;
-                        });
-                        jsPlumb.deleteEveryEndpoint(node);
-                        jsPlumb.remove(node);
-                        nodes = nodes.filter(n => n.id !== node.id);
-                    } else if (last.type === 'delete-node') {
-                        // Restore node ke DOM
-                        const parser = new DOMParser();
-                        const nodeDoc = parser.parseFromString(last.elHTML, 'text/html');
-                        const restoredEl = nodeDoc.body.firstChild;
-                        if (!document.getElementById(restoredEl.id)) {
-                            mapCanvas.appendChild(restoredEl);
-                            nodes.push(last.node);
-                            jsPlumb.draggable(restoredEl, { containment: 'parent' });
-                            // Re-attach tombol hapus node
-                            restoredEl.querySelector('.btn-delete-node').onclick = (e) => {
-                                e.stopPropagation();
-                                Swal.fire({
-                                    title: 'Hapus node ini?',
-                                    text: 'Semua kabel yang terhubung ke node ini akan dihapus.',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Ya, hapus!',
-                                    confirmButtonColor: 'red',
-                                    cancelButtonText: 'Batal'
-                                }).then((result) => {
-                                    if (result.isConfirmed) {
-                                        window.deleteNodeWithAction(restoredEl);
-                                    }
-                                });
-                            };
-                        }
-                        // Restore semua koneksi
-                        last.connections.forEach(conn => {
-                            window.connectNodeElementsByData(conn, { skipPowerCalc: true });
-                        });
-                    } else if (last.type === 'delete-connection') {
-                        window.connectNodeElementsByData(last.connection, { skipPowerCalc: true });
-                    }
-                    document.getElementById('info-card').classList.add('d-none');
-                    isTopologyChanged = true;
-                };
-
-                // Setelah save, kosongkan actions dan kunci undo
-                function afterSaveTopology() {
-                    actions = [];
-                    undoLocked = true;
-                }
-
             /**
              * Mengumpulkan dan menyimpan topologi ke server.
              */
@@ -1635,19 +1449,18 @@
                     const data = await res.json();
                     console.log('Response data:', data);
                     if (data.success) {
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'success',
-                        title: 'The topology is saved into a lab file!',
-                        showConfirmButton: false,
-                        timer: 1500
-                    });
-                    isTopologyChanged = false;
-                    afterSaveTopology(); // <--- Kunci undo
-                } else {
-                    throw new Error(data.message || 'Failed to save topology');
-                }
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: 'The topology is saved into a lab file!',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                        isTopologyChanged = false;
+                    } else {
+                        throw new Error(data.message || 'Failed to save topology');
+                    }
                 } catch (error) {
                     console.error('Error:', error);
                     Swal.fire({
