@@ -161,122 +161,128 @@
     <div id="map-canvas" data-lab-id="{{ $lab['id'] }}"
         style="position: relative; height: 100vh; background: #f8fafc;">
     </div>
-   
+
     <div id="kb-ftth-icon" class="kb-obstacle-icon" title="Knowledge Base FTTH">
-    <i class="bi bi-journal-bookmark-fill"></i>
+        <i class="bi bi-journal-bookmark-fill"></i>
     </div>
     <div id="kb-ftth-panel" class="kb-obstacle-panel" style="display:none;">
-    <div class="kb-header">
-        <span class="kb-title">Knowledge Base FTTH</span>
-        <button id="kb-ftth-close" class="kb-close" title="Tutup">&times;</button>
-    </div>
-    <div class="kb-tabs">
-        <button class="kb-tab active" data-tab="obstacle">
-        <i class="bi bi-tree-fill"></i> Obstacle
-        </button>
-        <button class="kb-tab" data-tab="device">
-        <i class="bi bi-cpu-fill"></i> Device/Node
-        </button>
-        <button class="kb-tab" data-tab="cable">
-        <i class="bi bi-plug-fill"></i> Fiber/Cable
-        </button>
-    </div>
-    <div class="kb-content" data-tab-content="obstacle">
-        <ul class="kb-list">
-        <li>
-            <span class="kb-icon text-success"><i class="bi bi-tree-fill"></i></span>
-            <span>
-            <span class="kb-list-title">Pohon</span>
-            <span class="kb-list-desc">Ranting/cabang bisa menghalangi atau merusak kabel FO udara.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-secondary"><i class="bi bi-bricks"></i></span>
-            <span>
-            <span class="kb-list-title">Tembok</span>
-            <span class="kb-list-desc">Perlu pipa pelindung jika menembus/melalui tembok.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-warning"><i class="bi bi-house-door-fill"></i></span>
-            <span>
-            <span class="kb-list-title">Bangunan</span>
-            <span class="kb-list-desc">Harus izin jika kabel melewati bangunan milik orang lain.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-info"><i class="bi bi-signpost-split-fill"></i></span>
-            <span>
-            <span class="kb-list-title">Tiang Listrik</span>
-            <span class="kb-list-desc">Diperlukan izin dari pemilik/instansi.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-primary"><i class="bi bi-signpost"></i></span>
-            <span>
-            <span class="kb-list-title">Jalan</span>
-            <span class="kb-list-desc">Untuk crossing, gunakan ducting bawah tanah atau pelindung.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-primary"><i class="bi bi-water"></i></span>
-            <span>
-            <span class="kb-list-title">Parit/Sungai</span>
-            <span class="kb-list-desc">Gunakan pipa khusus/jembatan kabel.</span>
-            </span>
-        </li>
-        </ul>
-    </div>
-    <div class="kb-content" data-tab-content="device" style="display:none;">
-        <ul class="kb-list">
-        <li>
-            <span class="kb-icon text-primary"><i class="bi bi-pc-display-horizontal"></i></span>
-            <span>
-            <span class="kb-list-title">OLT (Optical Line Terminal)</span>
-            <span class="kb-list-desc">Perangkat pusat pemancar sinyal optik ke pelanggan. Letak: Sentral/POP ISP.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-success"><i class="bi bi-diagram-3-fill"></i></span>
-            <span>
-            <span class="kb-list-title">Splitter</span>
-            <span class="kb-list-desc">Membagi sinyal optik ke banyak pelanggan (1:2, 1:4, dst). Tips: Hindari air, segel rapi.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-warning"><i class="bi bi-router-fill"></i></span>
-            <span>
-            <span class="kb-list-title">ONT/Client</span>
-            <span class="kb-list-desc">Ujung penerima sinyal di rumah pelanggan. Tips: Dekat sumber listrik, hindari panas/air.</span>
-            </span>
-        </li>
-        </ul>
-    </div>
-    <div class="kb-content" data-tab-content="cable" style="display:none;">
-        <ul class="kb-list">
-        <li>
-            <span class="kb-icon text-dark"><i class="bi bi-dash-lg"></i></span>
-            <span>
-            <span class="kb-list-title">Dropcore</span>
-            <span class="kb-list-desc">Kabel dari tiang ke rumah pelanggan (0.2 dB/km). Hindari tekukan tajam, gunakan clamp yang tepat.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-warning"><i class="bi bi-dash-lg"></i></span>
-            <span>
-            <span class="kb-list-title">Patchcord</span>
-            <span class="kb-list-desc">Kabel pendek untuk sambungan alat (0.3 dB/km). Biasanya kuning, konektor SC/LC.</span>
-            </span>
-        </li>
-        <li>
-            <span class="kb-icon text-danger"><i class="bi bi-arrows-collapse-vertical"></i></span>
-            <span>
-            <span class="kb-list-title">Splicing & Loss</span>
-            <span class="kb-list-desc">Sambungan optik menambah loss ±0.1 dB per sambungan. Bersihkan serat sebelum fusion.</span>
-            </span>
-        </li>
-        </ul>
-    </div>
+        <div class="kb-header">
+            <span class="kb-title">Knowledge Base FTTH</span>
+            <button id="kb-ftth-close" class="kb-close" title="Tutup">&times;</button>
+        </div>
+        <div class="kb-tabs">
+            <button class="kb-tab active" data-tab="obstacle">
+                <i class="bi bi-tree-fill"></i> Obstacle
+            </button>
+            <button class="kb-tab" data-tab="device">
+                <i class="bi bi-cpu-fill"></i> Device/Node
+            </button>
+            <button class="kb-tab" data-tab="cable">
+                <i class="bi bi-plug-fill"></i> Fiber/Cable
+            </button>
+        </div>
+        <div class="kb-content" data-tab-content="obstacle">
+            <ul class="kb-list">
+                <li>
+                    <span class="kb-icon text-success"><i class="bi bi-tree-fill"></i></span>
+                    <span>
+                        <span class="kb-list-title">Pohon</span>
+                        <span class="kb-list-desc">Ranting/cabang bisa menghalangi atau merusak kabel FO udara.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-secondary"><i class="bi bi-bricks"></i></span>
+                    <span>
+                        <span class="kb-list-title">Tembok</span>
+                        <span class="kb-list-desc">Perlu pipa pelindung jika menembus/melalui tembok.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-warning"><i class="bi bi-house-door-fill"></i></span>
+                    <span>
+                        <span class="kb-list-title">Bangunan</span>
+                        <span class="kb-list-desc">Harus izin jika kabel melewati bangunan milik orang lain.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-info"><i class="bi bi-signpost-split-fill"></i></span>
+                    <span>
+                        <span class="kb-list-title">Tiang Listrik</span>
+                        <span class="kb-list-desc">Diperlukan izin dari pemilik/instansi.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-primary"><i class="bi bi-signpost"></i></span>
+                    <span>
+                        <span class="kb-list-title">Jalan</span>
+                        <span class="kb-list-desc">Untuk crossing, gunakan ducting bawah tanah atau pelindung.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-primary"><i class="bi bi-water"></i></span>
+                    <span>
+                        <span class="kb-list-title">Parit/Sungai</span>
+                        <span class="kb-list-desc">Gunakan pipa khusus/jembatan kabel.</span>
+                    </span>
+                </li>
+            </ul>
+        </div>
+        <div class="kb-content" data-tab-content="device" style="display:none;">
+            <ul class="kb-list">
+                <li>
+                    <span class="kb-icon text-primary"><i class="bi bi-pc-display-horizontal"></i></span>
+                    <span>
+                        <span class="kb-list-title">OLT (Optical Line Terminal)</span>
+                        <span class="kb-list-desc">Perangkat pusat pemancar sinyal optik ke pelanggan. Letak: Sentral/POP
+                            ISP.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-success"><i class="bi bi-diagram-3-fill"></i></span>
+                    <span>
+                        <span class="kb-list-title">Splitter</span>
+                        <span class="kb-list-desc">Membagi sinyal optik ke banyak pelanggan (1:2, 1:4, dst). Tips: Hindari
+                            air, segel rapi.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-warning"><i class="bi bi-router-fill"></i></span>
+                    <span>
+                        <span class="kb-list-title">ONT/Client</span>
+                        <span class="kb-list-desc">Ujung penerima sinyal di rumah pelanggan. Tips: Dekat sumber listrik,
+                            hindari panas/air.</span>
+                    </span>
+                </li>
+            </ul>
+        </div>
+        <div class="kb-content" data-tab-content="cable" style="display:none;">
+            <ul class="kb-list">
+                <li>
+                    <span class="kb-icon text-dark"><i class="bi bi-dash-lg"></i></span>
+                    <span>
+                        <span class="kb-list-title">Dropcore</span>
+                        <span class="kb-list-desc">Kabel dari tiang ke rumah pelanggan (0.2 dB/km). Hindari tekukan tajam,
+                            gunakan clamp yang tepat.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-warning"><i class="bi bi-dash-lg"></i></span>
+                    <span>
+                        <span class="kb-list-title">Patchcord</span>
+                        <span class="kb-list-desc">Kabel pendek untuk sambungan alat (0.3 dB/km). Biasanya kuning, konektor
+                            SC/LC.</span>
+                    </span>
+                </li>
+                <li>
+                    <span class="kb-icon text-danger"><i class="bi bi-arrows-collapse-vertical"></i></span>
+                    <span>
+                        <span class="kb-list-title">Splicing & Loss</span>
+                        <span class="kb-list-desc">Sambungan optik menambah loss ±0.1 dB per sambungan. Bersihkan serat
+                            sebelum fusion.</span>
+                    </span>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <div id="info-card" class="card shadow-sm border border-info d-none"
@@ -1847,34 +1853,36 @@
             });
             // Show/hide panel
             document.getElementById('kb-ftth-icon').onclick = function() {
-            const panel = document.getElementById('kb-ftth-panel');
-            panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
+                const panel = document.getElementById('kb-ftth-panel');
+                panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' :
+                    'none';
             };
             document.getElementById('kb-ftth-close').onclick = function() {
-            document.getElementById('kb-ftth-panel').style.display = 'none';
+                document.getElementById('kb-ftth-panel').style.display = 'none';
             };
             // Tab switching
             document.querySelectorAll('.kb-tab').forEach(btn => {
-            btn.onclick = function() {
-                document.querySelectorAll('.kb-tab').forEach(tab => tab.classList.remove('active'));
-                this.classList.add('active');
-                const tabName = this.dataset.tab;
-                document.querySelectorAll('.kb-content').forEach(content => {
-                content.style.display = (content.dataset.tabContent === tabName) ? 'block' : 'none';
-                });
-            };
+                btn.onclick = function() {
+                    document.querySelectorAll('.kb-tab').forEach(tab => tab.classList.remove('active'));
+                    this.classList.add('active');
+                    const tabName = this.dataset.tab;
+                    document.querySelectorAll('.kb-content').forEach(content => {
+                        content.style.display = (content.dataset.tabContent === tabName) ?
+                            'block' : 'none';
+                    });
+                };
             });
             // Hide panel on click outside
             document.addEventListener('mousedown', function(e) {
-            const panel = document.getElementById('kb-ftth-panel');
-            const icon = document.getElementById('kb-ftth-icon');
-            if (
-                panel.style.display === 'block' &&
-                !panel.contains(e.target) &&
-                !icon.contains(e.target)
-            ) {
-                panel.style.display = 'none';
-            }
+                const panel = document.getElementById('kb-ftth-panel');
+                const icon = document.getElementById('kb-ftth-icon');
+                if (
+                    panel.style.display === 'block' &&
+                    !panel.contains(e.target) &&
+                    !icon.contains(e.target)
+                ) {
+                    panel.style.display = 'none';
+                }
             });
         });
     </script>
