@@ -26,9 +26,9 @@
             </div>
             <h5 class="fw-bold text-dark">Add Node</h5>
             <div class="d-grid gap-2 mb-2">
+                <!-- OLT -->
                 <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('OLT')">
-                    <!-- SVG OLT -->
-                    <svg width="20" height="20" viewBox="0 0 36 36" fill="none" style="vertical-align:middle;">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
                         <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A"
                             stroke-width="2" />
                         <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A" />
@@ -40,24 +40,44 @@
                     </svg>
                     OLT
                 </button>
+
+                <!-- Splitter -->
                 <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('Splitter')">
-                    <!-- SVG Splitter -->
-                    <svg width="20" height="20" viewBox="0 0 36 36" fill="none" style="vertical-align:middle;">
-                        <rect x="8" y="10" width="20" height="16" rx="3" fill="#10B981" stroke="#047857"
+                    <svg width="36" height="36" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="12" y="14" width="36" height="32" rx="4" fill="#E5E7EB" stroke="#334155"
                             stroke-width="2" />
-                        <line x1="18" y1="10" x2="18" y2="26" stroke="#047857"
-                            stroke-width="2" />
-                        <circle cx="14" cy="18" r="2" fill="#FBBF24" />
-                        <circle cx="22" cy="18" r="2" fill="#FBBF24" />
-                        <rect x="13" y="25" width="10" height="2" rx="1" fill="#047857" />
+                        <rect x="16" y="20" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A"
+                            stroke-width="1" />
+                        <rect x="16" y="24" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A"
+                            stroke-width="1" />
+                        <rect x="17.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF" />
+                        <rect x="17.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF" />
+                        <rect x="26" y="20" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A"
+                            stroke-width="1" />
+                        <rect x="26" y="24" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A"
+                            stroke-width="1" />
+                        <rect x="27.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF" />
+                        <rect x="27.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF" />
+                        <rect x="36" y="20" width="8" height="4" rx="1" fill="#3B82F6"
+                            stroke="#1E3A8A" stroke-width="1" />
+                        <rect x="36" y="24" width="8" height="4" rx="1" fill="#3B82F6"
+                            stroke="#1E3A8A" stroke-width="1" />
+                        <rect x="37.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF" />
+                        <rect x="37.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF" />
+                        <rect x="18" y="44" width="3" height="5" rx="1" fill="#1F2937" />
+                        <rect x="24" y="44" width="3" height="5" rx="1" fill="#1F2937" />
+                        <rect x="30" y="44" width="3" height="5" rx="1" fill="#1F2937" />
+                        <rect x="36" y="44" width="3" height="5" rx="1" fill="#1F2937" />
+                        <rect x="42" y="44" width="3" height="5" rx="1" fill="#1F2937" />
                     </svg>
                     Splitter
                 </button>
+
+                <!-- Client -->
                 <button class="btn btn-sm btn-light text-dark fw-bold" onclick="addNode('Client')">
-                    <!-- SVG Client -->
-                    <svg width="20" height="20" viewBox="0 0 36 36" fill="none" style="vertical-align:middle;">
-                        <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42" stroke="#B45309"
-                            stroke-width="2" />
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                        <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42"
+                            stroke="#B45309" stroke-width="2" />
                         <rect x="13" y="23" width="10" height="2" rx="1" fill="#B45309" />
                         <circle cx="18" cy="18" r="2" fill="#FBBF24" />
                     </svg>
@@ -84,9 +104,6 @@
 
                 <label class="form-label text-white">Connector</label>
                 <input type="number" id="connectors" class="form-control form-control-sm mb-2" value="2">
-
-                <label class="form-label text-white">Splicing</label>
-                <input type="number" id="splicing" class="form-control form-control-sm mb-2" value="1">
             </div>
 
             <div class="d-grid gap-2 mb-2">
@@ -290,8 +307,7 @@
 
                 Toast.fire({
                     icon: 'success',
-                    title: '{{ session('
-                                                                                                                                                                                                                                                                                                    success ') }}'
+                    title: '{{ session('success ') }}'
                 });
             });
         </script>
@@ -382,6 +398,7 @@
         const rawConnections = {!! $connectionsJson !!};
         const defaultPower = {{ $power }};
         const inputPower = document.getElementById('input-power');
+        const inputSplicing = document.getElementById('splicing');
         const mapCanvas = document.getElementById('map-canvas');
         let nodeId = 0;
         let selectedNode = null;
@@ -428,28 +445,50 @@
             // Tambahkan di dalam jsPlumb.ready, sebelum createNodeElement:
             function getDeviceIcon(type) {
                 if (type === 'OLT') {
-                    return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2"/>
-                        <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A"/>
-                        <circle cx="9" cy="18" r="1.5" fill="#FBBF24"/>
-                        <circle cx="13" cy="18" r="1.5" fill="#FBBF24"/>
-                        <circle cx="17" cy="18" r="1.5" fill="#FBBF24"/>
-                        <rect x="22" y="16" width="8" height="4" rx="1" fill="#F1F5F9" stroke="#1E3A8A" stroke-width="1"/>
-                    </svg>`;
+                    return `
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2"/>
+            <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A"/>
+            <circle cx="9" cy="18" r="1.5" fill="#FBBF24"/>
+            <circle cx="13" cy="18" r="1.5" fill="#FBBF24"/>
+            <circle cx="17" cy="18" r="1.5" fill="#FBBF24"/>
+            <rect x="22" y="16" width="8" height="4" rx="1" fill="#F1F5F9" stroke="#1E3A8A" stroke-width="1"/>
+        </svg>`;
                 } else if (type && type.startsWith('Splitter')) {
-                    return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect x="8" y="10" width="20" height="16" rx="3" fill="#10B981" stroke="#047857" stroke-width="2"/>
-                        <line x1="18" y1="10" x2="18" y2="26" stroke="#047857" stroke-width="2"/>
-                        <circle cx="14" cy="18" r="2" fill="#FBBF24"/>
-                        <circle cx="22" cy="18" r="2" fill="#FBBF24"/>
-                        <rect x="13" y="25" width="10" height="2" rx="1" fill="#047857"/>
-                    </svg>`;
+                    return `
+        <svg width="36" height="36" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+            <rect x="12" y="14" width="36" height="32" rx="4" fill="#E5E7EB" stroke="#334155" stroke-width="2"/>
+
+            <!-- SC Connectors (atas & bawah) -->
+            <rect x="16" y="20" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+            <rect x="16" y="24" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+            <rect x="17.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+            <rect x="17.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+
+            <rect x="26" y="20" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+            <rect x="26" y="24" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+            <rect x="27.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+            <rect x="27.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+
+            <rect x="36" y="20" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+            <rect x="36" y="24" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+            <rect x="37.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+            <rect x="37.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+
+            <!-- Kabel drop bawah -->
+            <rect x="18" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+            <rect x="24" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+            <rect x="30" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+            <rect x="36" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+            <rect x="42" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+        </svg>`;
                 } else if (type === 'Client' || type === 'ONT') {
-                    return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42" stroke="#B45309" stroke-width="2"/>
-                        <rect x="13" y="23" width="10" height="2" rx="1" fill="#B45309"/>
-                        <circle cx="18" cy="18" r="2" fill="#FBBF24"/>
-                    </svg>`;
+                    return `
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42" stroke="#B45309" stroke-width="2"/>
+            <rect x="13" y="23" width="10" height="2" rx="1" fill="#B45309"/>
+            <circle cx="18" cy="18" r="2" fill="#FBBF24"/>
+        </svg>`;
                 }
                 return '';
             }
@@ -755,8 +794,7 @@
                 const lossTarget = parseFloat(target.dataset.loss || 0);
                 const totalConnectors = validateNumberInput(document.getElementById('connectors')?.value,
                     'Connectors') || 0;
-                const totalSplicing = validateNumberInput(document.getElementById('splicing')?.value, 'Splicing') ||
-                    0;
+                const totalSplicing = validateNumberInput(inputSplicing?.value, 'Splicing') || 0;
                 const connectorLoss = totalConnectors * 0.2;
                 const splicingLoss = totalSplicing * 0.1;
                 const totalLoss = lossCable + lossTarget + connectorLoss + splicingLoss;
@@ -1405,10 +1443,13 @@
                         length: link.length
                     })),
                     power: parseFloat(inputPower?.value || 0),
+                    splicing: parseInt(inputSplicing?.value || 0), // ✅ Tambahan
+                    connectors: parseInt(document.getElementById('connectors')?.value || 0), // ✅ Tambahan
                     name: lab?.name || 'topologi',
                     author: lab?.author || '',
                     description: lab?.description || ''
                 };
+
 
                 if (topology.nodes.length === 0 || topology.connections.length === 0) {
                     Swal.fire({
@@ -1602,10 +1643,14 @@
                         length: link.length
                     })),
                     power: parseFloat(inputPower?.value || 0),
+                    splicing: parseInt(inputSplicing?.value || 0), // ✅ Tambahan
+                    connectors: parseInt(document.getElementById('connectors')?.value ||
+                        0), // ✅ Tambahan
                     name: '{{ $lab['name'] ?? '' }}',
                     author: '{{ $lab['author'] ?? '' }}',
                     description: '{{ $lab['description'] ?? '' }}'
                 };
+
                 console.log('Topology data:', topology);
 
                 const labId = mapCanvas.dataset.labId;

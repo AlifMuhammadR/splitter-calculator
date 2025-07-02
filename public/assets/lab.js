@@ -27,7 +27,7 @@ function createPreviewNodeElement(node) {
 
     if (type === 'OLT') {
         svg = `
-            <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+            <svg width="50" height="50" viewBox="0 0 36 36" fill="none">
                 <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2"/>
                 <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A"/>
                 <circle cx="9" cy="18" r="1.5" fill="#FBBF24"/>
@@ -37,22 +37,46 @@ function createPreviewNodeElement(node) {
             </svg>`;
     } else if (type.startsWith('Splitter')) {
         svg = `
-            <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
-                <rect x="8" y="10" width="20" height="16" rx="3" fill="#10B981" stroke="#047857" stroke-width="2"/>
-                <line x1="18" y1="10" x2="18" y2="26" stroke="#047857" stroke-width="2"/>
-                <circle cx="14" cy="18" r="2" fill="#FBBF24"/>
-                <circle cx="22" cy="18" r="2" fill="#FBBF24"/>
-                <rect x="13" y="25" width="10" height="2" rx="1" fill="#047857"/>
-            </svg>`;
+            <svg width="50" height="50" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Kotak utama ODP -->
+  <rect x="12" y="14" width="36" height="32" rx="4" fill="#E5E7EB" stroke="#334155" stroke-width="2"/>
+
+  <!-- SC Connector (atas & bawah) style, dan diposisikan ke tengah ODP -->
+
+  <!-- SC 1 -->
+  <rect x="16" y="20" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+  <rect x="16" y="24" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+  <rect x="17.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+  <rect x="17.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+
+  <!-- SC 2 -->
+  <rect x="26" y="20" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+  <rect x="26" y="24" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+  <rect x="27.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+  <rect x="27.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+
+  <!-- SC 3 -->
+  <rect x="36" y="20" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+  <rect x="36" y="24" width="8" height="4" rx="1" fill="#3B82F6" stroke="#1E3A8A" stroke-width="1"/>
+  <rect x="37.5" y="18" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+  <rect x="37.5" y="28" width="5" height="2" rx="0.5" fill="#1E40AF"/>
+
+  <!-- Lubang kabel (kabel drop) -->
+  <rect x="18" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+  <rect x="24" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+  <rect x="30" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+  <rect x="36" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+  <rect x="42" y="44" width="3" height="5" rx="1" fill="#1F2937"/>
+</svg>
+`;
     } else if (type === 'Client') {
         svg = `
-            <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+            <svg width="50" height="50" viewBox="0 0 36 36" fill="none">
                 <rect x="10" y="14" width="16" height="8" rx="2" fill="#F59E42" stroke="#B45309" stroke-width="2"/>
                 <rect x="13" y="23" width="10" height="2" rx="1" fill="#B45309"/>
                 <circle cx="18" cy="18" r="2" fill="#FBBF24"/>
             </svg>`;
     }
-
     el.innerHTML = `
         <div class="d-flex flex-column align-items-center">
             ${svg}
@@ -104,8 +128,11 @@ function previewLab(labId) {
                     </div>
                     <div class="card-body">
                         <div>Total Loss: <span class="text-danger fw-bold">${totalLoss.toFixed(2)} dB</span></div>
-                        <div>Output Power: <span class="text-primary fw-bold">${(outputNode?.power ?? 0).toFixed(2)} dBm</span></div>
-                        <div>Jalur: ${data.nodes?.[0]?.type || '?'} → ${outputNode?.type || '?'}</div>
+<div>Total cable loss: 50m x ${(data.connections[0]?.cable === 'Patchcord' ? 0.0003 : 0.0002).toFixed(4)} dB/m = ${(data.connections.reduce((sum, c) => sum + (c.length || 0), 0) * (data.connections[0]?.cable === 'Patchcord' ? 0.0003 : 0.0002)).toFixed(3)} dB</div>
+<div>Total loss splicing: ${data.splicing || 0} x 0.1dB = ${((data.splicing || 0) * 0.1).toFixed(2)} dB</div>
+<div>Connector loss: ${data.connectors || 0} x 0.2dB = ${((data.connectors || 0) * 0.2).toFixed(2)} dB</div>
+<div>Output Power: <span class="text-primary fw-bold">${(outputNode?.power ?? 0).toFixed(2)} dBm</span></div>
+<div>Jalur: ${data.nodes?.[0]?.type || '?'} → ${outputNode?.type || '?'}</div>
                     </div>
                 </div>
             `;
