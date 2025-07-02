@@ -299,15 +299,22 @@
             </div>
             <div id="output-power-list" class="mb-2" style="font-size:13px;"></div>
             <div id="loss-status" class="mt-2"></div>
+        </div>
     </div>
-    </div>
-</div>
 
-    <!-- Button toggle -->
-    <button onclick="toggleStatusTable()" class="btn fw-bold"
-        style="background: linear-gradient(87deg, #2dce89 0, #10BC69 100%); position: fixed; bottom: 20px; right: 20px; border-radius: 25px; color: #323233;">
-        <i class="bi bi-table"></i> Tabel Status
-    </button>
+    <div class="dropdown" style="position: fixed; bottom: 20px; right: 20px;">
+        <button class="btn dropdown-toggle fw-bold"
+            style="background: linear-gradient(87deg, #2dce89 0, #10BC69 100%); border-radius: 25px; color: #323233;"
+            type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-tools"></i> Lab Information
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#" onclick="toggleStatusTable()"><i class="bi bi-table"></i> Status
+                    Table</a></li>
+            <li><a class="dropdown-item" href="#" onclick="toggleInfoLoss()"><i class="bi bi-bar-chart-fill"></i>
+                    Loss Information</a></li>
+        </ul>
+    </div>
 
     <!-- Tabel Status Power Loss -->
     <div id="status-table-box" class="bg-white border rounded shadow-lg p-3 mt-3"
@@ -358,6 +365,11 @@
             const box = document.getElementById("status-table-box");
             box.style.display = (box.style.display === "none") ? "block" : "none";
         }
+
+        function toggleInfoLoss() {
+            const box = document.getElementById("info-card");
+            box.style.display = (box.style.display === "none") ? "block" : "none";
+        }
     </script>
 
     {{-- Form untuk update name lab, author & description --}}
@@ -383,7 +395,7 @@
 
                 Toast.fire({
                     icon: 'success',
-                    title: '{{ session('success ') }}'
+                    title: '{{ session('success') }}'
                 });
             });
         </script>
@@ -600,15 +612,18 @@
                 return path.join(' → ');
             }
 
-             // === ADVANCED DELETE UNTUK RESTORE/UNDO ===
+            // === ADVANCED DELETE UNTUK RESTORE/UNDO ===
             window.deleteNodeWithAction = function(nodeEl) {
                 // Simpan semua koneksi terkait node ini
-                const relatedConnections = lines.filter(conn => conn.from === nodeEl.id || conn.to === nodeEl.id);
+                const relatedConnections = lines.filter(conn => conn.from === nodeEl.id || conn.to === nodeEl
+                    .id);
                 // Simpan data node
                 const nodeData = nodes.find(n => n.id === nodeEl.id);
                 actions.push({
                     type: 'delete-node',
-                    node: {...nodeData},
+                    node: {
+                        ...nodeData
+                    },
                     elHTML: nodeEl.outerHTML,
                     connections: relatedConnections.map(conn => ({
                         from: conn.from,
@@ -1114,7 +1129,8 @@
                                 if (result.isConfirmed) {
                                     // Cari connObj dari lines
                                     const connObj = lines.find(l => l.conn === conn);
-                                    if (connObj) window.deleteConnectionWithAction(connObj);
+                                    if (connObj) window.deleteConnectionWithAction(
+                                        connObj);
                                 }
                             });
                         };
@@ -1295,7 +1311,9 @@
                     if (!document.getElementById(restoredEl.id)) {
                         mapCanvas.appendChild(restoredEl);
                         nodes.push(last.node);
-                        jsPlumb.draggable(restoredEl, { containment: 'parent' });
+                        jsPlumb.draggable(restoredEl, {
+                            containment: 'parent'
+                        });
                         // Re-attach tombol hapus node
                         restoredEl.querySelector('.btn-delete-node').onclick = (e) => {
                             e.stopPropagation();
@@ -1316,10 +1334,14 @@
                     }
                     // Restore semua koneksi
                     last.connections.forEach(conn => {
-                        window.connectNodeElementsByData(conn, { skipPowerCalc: true });
+                        window.connectNodeElementsByData(conn, {
+                            skipPowerCalc: true
+                        });
                     });
                 } else if (last.type === 'delete-connection') {
-                    window.connectNodeElementsByData(last.connection, { skipPowerCalc: true });
+                    window.connectNodeElementsByData(last.connection, {
+                        skipPowerCalc: true
+                    });
                 }
                 document.getElementById('info-card').classList.add('d-none');
                 isTopologyChanged = true;
@@ -1623,79 +1645,85 @@
             };
 
             window.undoAction = function() {
-                        if (undoLocked) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Undo tidak bisa dilakukan setelah save!',
-                            showConfirmButton: false,
-                            timer: 2000,
-                            timerProgressBar: true
-                        });
-                        return;
-                    }
-                    if (actions.length === 0) return;
-                    const last = actions.pop();
-                    if (last.type === 'add-connection') {
-                        const lineIndex = lines.findIndex(l => l.conn === last.conn);
-                        if (lineIndex !== -1) {
-                            jsPlumb.deleteConnection(lines[lineIndex].conn);
-                            lines.splice(lineIndex, 1);
-                        }
-                    } else if (last.type === 'add-node') {
-                        const node = last.node;
-                        lines = lines.filter(conn => {
-                            if (conn.from === node.id || conn.to === node.id) {
-                                jsPlumb.deleteConnection(conn.conn);
-                                return false;
-                            }
-                            return true;
-                        });
-                        jsPlumb.deleteEveryEndpoint(node);
-                        jsPlumb.remove(node);
-                        nodes = nodes.filter(n => n.id !== node.id);
-                    } else if (last.type === 'delete-node') {
-                        // Restore node ke DOM
-                        const parser = new DOMParser();
-                        const nodeDoc = parser.parseFromString(last.elHTML, 'text/html');
-                        const restoredEl = nodeDoc.body.firstChild;
-                        if (!document.getElementById(restoredEl.id)) {
-                            mapCanvas.appendChild(restoredEl);
-                            nodes.push(last.node);
-                            jsPlumb.draggable(restoredEl, { containment: 'parent' });
-                            // Re-attach tombol hapus node
-                            restoredEl.querySelector('.btn-delete-node').onclick = (e) => {
-                                e.stopPropagation();
-                                Swal.fire({
-                                    title: 'Hapus node ini?',
-                                    text: 'Semua kabel yang terhubung ke node ini akan dihapus.',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Ya, hapus!',
-                                    confirmButtonColor: 'red',
-                                    cancelButtonText: 'Batal'
-                                }).then((result) => {
-                                    if (result.isConfirmed) {
-                                        window.deleteNodeWithAction(restoredEl);
-                                    }
-                                });
-                            };
-                        }
-                        // Restore semua koneksi
-                        last.connections.forEach(conn => {
-                            window.connectNodeElementsByData(conn, { skipPowerCalc: true });
-                        });
-                    } else if (last.type === 'delete-connection') {
-                        window.connectNodeElementsByData(last.connection, { skipPowerCalc: true });
-                    }
-                    document.getElementById('info-card').classList.add('d-none');
-                    isTopologyChanged = true;
-                };
-
-                // Setelah save, kosongkan actions dan kunci undo
-                function afterSaveTopology() {
-                    actions = [];
-                    undoLocked = true;
+                if (undoLocked) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Undo tidak bisa dilakukan setelah save!',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+                    return;
                 }
+                if (actions.length === 0) return;
+                const last = actions.pop();
+                if (last.type === 'add-connection') {
+                    const lineIndex = lines.findIndex(l => l.conn === last.conn);
+                    if (lineIndex !== -1) {
+                        jsPlumb.deleteConnection(lines[lineIndex].conn);
+                        lines.splice(lineIndex, 1);
+                    }
+                } else if (last.type === 'add-node') {
+                    const node = last.node;
+                    lines = lines.filter(conn => {
+                        if (conn.from === node.id || conn.to === node.id) {
+                            jsPlumb.deleteConnection(conn.conn);
+                            return false;
+                        }
+                        return true;
+                    });
+                    jsPlumb.deleteEveryEndpoint(node);
+                    jsPlumb.remove(node);
+                    nodes = nodes.filter(n => n.id !== node.id);
+                } else if (last.type === 'delete-node') {
+                    // Restore node ke DOM
+                    const parser = new DOMParser();
+                    const nodeDoc = parser.parseFromString(last.elHTML, 'text/html');
+                    const restoredEl = nodeDoc.body.firstChild;
+                    if (!document.getElementById(restoredEl.id)) {
+                        mapCanvas.appendChild(restoredEl);
+                        nodes.push(last.node);
+                        jsPlumb.draggable(restoredEl, {
+                            containment: 'parent'
+                        });
+                        // Re-attach tombol hapus node
+                        restoredEl.querySelector('.btn-delete-node').onclick = (e) => {
+                            e.stopPropagation();
+                            Swal.fire({
+                                title: 'Hapus node ini?',
+                                text: 'Semua kabel yang terhubung ke node ini akan dihapus.',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Ya, hapus!',
+                                confirmButtonColor: 'red',
+                                cancelButtonText: 'Batal'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.deleteNodeWithAction(restoredEl);
+                                }
+                            });
+                        };
+                    }
+                    // Restore semua koneksi
+                    last.connections.forEach(conn => {
+                        window.connectNodeElementsByData(conn, {
+                            skipPowerCalc: true
+                        });
+                    });
+                } else if (last.type === 'delete-connection') {
+                    window.connectNodeElementsByData(last.connection, {
+                        skipPowerCalc: true
+                    });
+                }
+                document.getElementById('info-card').classList.add('d-none');
+                isTopologyChanged = true;
+            };
+
+            // Setelah save, kosongkan actions dan kunci undo
+            function afterSaveTopology() {
+                actions = [];
+                undoLocked = true;
+            }
 
             /**
              * Mengumpulkan dan menyimpan topologi ke server.
@@ -1756,19 +1784,19 @@
                     const data = await res.json();
                     console.log('Response data:', data);
                     if (data.success) {
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'success',
-                        title: 'The topology is saved into a lab file!',
-                        showConfirmButton: false,
-                        timer: 1500
-                    });
-                    isTopologyChanged = false;
-                    afterSaveTopology(); // <--- Kunci undo
-                } else {
-                    throw new Error(data.message || 'Failed to save topology');
-                }
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: 'The topology is saved into a lab file!',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                        isTopologyChanged = false;
+                        afterSaveTopology(); // <--- Kunci undo
+                    } else {
+                        throw new Error(data.message || 'Failed to save topology');
+                    }
                 } catch (error) {
                     console.error('Error:', error);
                     Swal.fire({
