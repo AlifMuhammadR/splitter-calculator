@@ -216,9 +216,6 @@ class LabController extends Controller
         return redirect()->route('lab.canvas', $lab->id)->with('success', 'Lab successfully created!');
     }
 
-
-
-
     /**
      * Display the specified resource.
      */
