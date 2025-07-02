@@ -223,8 +223,9 @@
             </div>
             <div id="output-power-list" class="mb-2" style="font-size:13px;"></div>
             <div id="loss-status" class="mt-2"></div>
-        </div>
     </div>
+    </div>
+</div>
 
     <!-- Button toggle -->
     <button onclick="toggleStatusTable()" class="btn fw-bold"
@@ -407,6 +408,7 @@
         let selectedCableName = 'Dropcore';
         let actions = [];
         let isTopologyChanged = false;
+        let undoLocked = false; // Tambahkan flag kunci undo
         let nodes = []; // {id, type, loss, power, top, left}
         let lines = []; // {from, to, cable, loss, length, conn(jsPlumb)}
 
@@ -522,6 +524,51 @@
                 return path.join(' → ');
             }
 
+             // === ADVANCED DELETE UNTUK RESTORE/UNDO ===
+            window.deleteNodeWithAction = function(nodeEl) {
+                // Simpan semua koneksi terkait node ini
+                const relatedConnections = lines.filter(conn => conn.from === nodeEl.id || conn.to === nodeEl.id);
+                // Simpan data node
+                const nodeData = nodes.find(n => n.id === nodeEl.id);
+                actions.push({
+                    type: 'delete-node',
+                    node: {...nodeData},
+                    elHTML: nodeEl.outerHTML,
+                    connections: relatedConnections.map(conn => ({
+                        from: conn.from,
+                        to: conn.to,
+                        cable: conn.cable,
+                        loss: conn.loss,
+                        length: conn.length
+                    }))
+                });
+                // Hapus semua kabel terkait
+                relatedConnections.forEach(conn => jsPlumb.deleteConnection(conn.conn));
+                lines = lines.filter(conn => conn.from !== nodeEl.id && conn.to !== nodeEl.id);
+                jsPlumb.removeAllEndpoints(nodeEl);
+                mapCanvas.removeChild(nodeEl);
+                nodes = nodes.filter(n => n.id !== nodeEl.id);
+                if (selectedNode && selectedNode.id === nodeEl.id) selectedNode = null;
+                isTopologyChanged = true;
+                document.getElementById('info-card').classList.add('d-none');
+            };
+
+            window.deleteConnectionWithAction = function(connObj) {
+                actions.push({
+                    type: 'delete-connection',
+                    connection: {
+                        from: connObj.from,
+                        to: connObj.to,
+                        cable: connObj.cable,
+                        loss: connObj.loss,
+                        length: connObj.length
+                    }
+                });
+                jsPlumb.deleteConnection(connObj.conn);
+                lines = lines.filter(l => l.conn !== connObj.conn);
+                isTopologyChanged = true;
+            };
+
 
             // Ganti function createNodeElement menjadi:
             function createNodeElement(nodeData) {
@@ -584,16 +631,7 @@
                         cancelButtonText: 'Batal'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            const toDelete = lines.filter(conn => conn.from === el.id || conn.to === el
-                                .id);
-                            toDelete.forEach(conn => jsPlumb.deleteConnection(conn.conn));
-                            lines = lines.filter(conn => conn.from !== el.id && conn.to !== el.id);
-                            jsPlumb.removeAllEndpoints(el);
-                            mapCanvas.removeChild(el);
-                            nodes = nodes.filter(n => n.id !== el.id);
-                            if (selectedNode && selectedNode.id === el.id) selectedNode = null;
-                            isTopologyChanged = true;
-                            document.getElementById('info-card').classList.add('d-none');
+                            window.deleteNodeWithAction(el);
                         }
                     });
                 };
@@ -998,9 +1036,9 @@
                                 cancelButtonText: 'Batal'
                             }).then(result => {
                                 if (result.isConfirmed) {
-                                    jsPlumb.deleteConnection(conn);
-                                    lines = lines.filter(l => l.conn !== conn);
-                                    isTopologyChanged = true;
+                                    // Cari connObj dari lines
+                                    const connObj = lines.find(l => l.conn === conn);
+                                    if (connObj) window.deleteConnectionWithAction(connObj);
                                 }
                             });
                         };
@@ -1143,6 +1181,16 @@
              * Menghapus aksi terakhir (undo).
              */
             window.undoAction = function() {
+                if (undoLocked) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Undo tidak bisa dilakukan setelah save!',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+                    return;
+                }
                 if (actions.length === 0) return;
                 const last = actions.pop();
                 if (last.type === 'add-connection') {
@@ -1163,6 +1211,39 @@
                     jsPlumb.deleteEveryEndpoint(node);
                     jsPlumb.remove(node);
                     nodes = nodes.filter(n => n.id !== node.id);
+                } else if (last.type === 'delete-node') {
+                    // Restore node ke DOM
+                    const parser = new DOMParser();
+                    const nodeDoc = parser.parseFromString(last.elHTML, 'text/html');
+                    const restoredEl = nodeDoc.body.firstChild;
+                    if (!document.getElementById(restoredEl.id)) {
+                        mapCanvas.appendChild(restoredEl);
+                        nodes.push(last.node);
+                        jsPlumb.draggable(restoredEl, { containment: 'parent' });
+                        // Re-attach tombol hapus node
+                        restoredEl.querySelector('.btn-delete-node').onclick = (e) => {
+                            e.stopPropagation();
+                            Swal.fire({
+                                title: 'Hapus node ini?',
+                                text: 'Semua kabel yang terhubung ke node ini akan dihapus.',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Ya, hapus!',
+                                confirmButtonColor: 'red',
+                                cancelButtonText: 'Batal'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.deleteNodeWithAction(restoredEl);
+                                }
+                            });
+                        };
+                    }
+                    // Restore semua koneksi
+                    last.connections.forEach(conn => {
+                        window.connectNodeElementsByData(conn, { skipPowerCalc: true });
+                    });
+                } else if (last.type === 'delete-connection') {
+                    window.connectNodeElementsByData(last.connection, { skipPowerCalc: true });
                 }
                 document.getElementById('info-card').classList.add('d-none');
                 isTopologyChanged = true;
@@ -1465,6 +1546,81 @@
                 document.getElementById('import-file').value = ''; // Reset file input sesuai ID input
             };
 
+            window.undoAction = function() {
+                        if (undoLocked) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Undo tidak bisa dilakukan setelah save!',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            timerProgressBar: true
+                        });
+                        return;
+                    }
+                    if (actions.length === 0) return;
+                    const last = actions.pop();
+                    if (last.type === 'add-connection') {
+                        const lineIndex = lines.findIndex(l => l.conn === last.conn);
+                        if (lineIndex !== -1) {
+                            jsPlumb.deleteConnection(lines[lineIndex].conn);
+                            lines.splice(lineIndex, 1);
+                        }
+                    } else if (last.type === 'add-node') {
+                        const node = last.node;
+                        lines = lines.filter(conn => {
+                            if (conn.from === node.id || conn.to === node.id) {
+                                jsPlumb.deleteConnection(conn.conn);
+                                return false;
+                            }
+                            return true;
+                        });
+                        jsPlumb.deleteEveryEndpoint(node);
+                        jsPlumb.remove(node);
+                        nodes = nodes.filter(n => n.id !== node.id);
+                    } else if (last.type === 'delete-node') {
+                        // Restore node ke DOM
+                        const parser = new DOMParser();
+                        const nodeDoc = parser.parseFromString(last.elHTML, 'text/html');
+                        const restoredEl = nodeDoc.body.firstChild;
+                        if (!document.getElementById(restoredEl.id)) {
+                            mapCanvas.appendChild(restoredEl);
+                            nodes.push(last.node);
+                            jsPlumb.draggable(restoredEl, { containment: 'parent' });
+                            // Re-attach tombol hapus node
+                            restoredEl.querySelector('.btn-delete-node').onclick = (e) => {
+                                e.stopPropagation();
+                                Swal.fire({
+                                    title: 'Hapus node ini?',
+                                    text: 'Semua kabel yang terhubung ke node ini akan dihapus.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Ya, hapus!',
+                                    confirmButtonColor: 'red',
+                                    cancelButtonText: 'Batal'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.deleteNodeWithAction(restoredEl);
+                                    }
+                                });
+                            };
+                        }
+                        // Restore semua koneksi
+                        last.connections.forEach(conn => {
+                            window.connectNodeElementsByData(conn, { skipPowerCalc: true });
+                        });
+                    } else if (last.type === 'delete-connection') {
+                        window.connectNodeElementsByData(last.connection, { skipPowerCalc: true });
+                    }
+                    document.getElementById('info-card').classList.add('d-none');
+                    isTopologyChanged = true;
+                };
+
+                // Setelah save, kosongkan actions dan kunci undo
+                function afterSaveTopology() {
+                    actions = [];
+                    undoLocked = true;
+                }
+
             /**
              * Mengumpulkan dan menyimpan topologi ke server.
              */
@@ -1524,18 +1680,19 @@
                     const data = await res.json();
                     console.log('Response data:', data);
                     if (data.success) {
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'success',
-                            title: 'The topology is saved into a lab file!',
-                            showConfirmButton: false,
-                            timer: 1500
-                        });
-                        isTopologyChanged = false;
-                    } else {
-                        throw new Error(data.message || 'Failed to save topology');
-                    }
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'The topology is saved into a lab file!',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                    isTopologyChanged = false;
+                    afterSaveTopology(); // <--- Kunci undo
+                } else {
+                    throw new Error(data.message || 'Failed to save topology');
+                }
                 } catch (error) {
                     console.error('Error:', error);
                     Swal.fire({
