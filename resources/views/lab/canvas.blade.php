@@ -1,7 +1,6 @@
 @extends('fe.lab')
 @section('title', 'Lab - ' . $lab['name'])
 @section('content')
-    <link rel="stylesheet" href="{{ asset('assets/lab.css') }}">
     <!-- sidebar -->
     <div id="sidebar" class="position-fixed sidebar-hidden">
         <div class="inner p-3">
