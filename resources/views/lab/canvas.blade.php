@@ -84,9 +84,6 @@
 
                 <label class="form-label text-white">Connector</label>
                 <input type="number" id="connectors" class="form-control form-control-sm mb-2" value="2">
-
-                <label class="form-label text-white">Splicing</label>
-                <input type="number" id="splicing" class="form-control form-control-sm mb-2" value="1">
             </div>
 
             <div class="d-grid gap-2 mb-2">
@@ -290,7 +287,7 @@
                 Toast.fire({
                     icon: 'success',
                     title: '{{ session('
-                                                                                                                                                                                                                                                                                                    success ') }}'
+                                                                                                                                                                                                                                                                                                                                                                                                        success ') }}'
                 });
             });
         </script>
@@ -381,6 +378,7 @@
         const rawConnections = {!! $connectionsJson !!};
         const defaultPower = {{ $power }};
         const inputPower = document.getElementById('input-power');
+        const inputSplicing = document.getElementById('splicing');
         const mapCanvas = document.getElementById('map-canvas');
         let nodeId = 0;
         let selectedNode = null;
@@ -426,7 +424,7 @@
             // Tambahkan di dalam jsPlumb.ready, sebelum createNodeElement:
             function getDeviceIcon(type) {
                 if (type === 'OLT') {
-                    return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                    return `<svg width="55" height="36" viewBox="0 0 36 36" fill="none">
                         <rect x="4" y="12" width="28" height="12" rx="2" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2"/>
                         <rect x="8" y="24" width="20" height="2" rx="1" fill="#1E3A8A"/>
                         <circle cx="9" cy="18" r="1.5" fill="#FBBF24"/>
@@ -717,8 +715,7 @@
                 const lossTarget = parseFloat(target.dataset.loss || 0);
                 const totalConnectors = validateNumberInput(document.getElementById('connectors')?.value,
                     'Connectors') || 0;
-                const totalSplicing = validateNumberInput(document.getElementById('splicing')?.value, 'Splicing') ||
-                    0;
+                const totalSplicing = validateNumberInput(inputSplicing?.value, 'Splicing') || 0;
                 const connectorLoss = totalConnectors * 0.2;
                 const splicingLoss = totalSplicing * 0.1;
                 const totalLoss = lossCable + lossTarget + connectorLoss + splicingLoss;
@@ -1101,57 +1098,6 @@
                 });
             });
 
-
-            // jsPlumb.bind('connection', function(info) {
-            //     const conn = info.connection;
-            //     const meta = conn._customMeta || {};
-
-            //     const loss = typeof meta.loss === 'number' ? meta.loss : 0;
-            //     const color = meta.color || 'black';
-            //     const dash = meta.name === 'Patchcord' ? '4 2' : undefined;
-
-            //     // Biarkan nilai kecil ditampilkan manusiawi
-            //     const labelLoss = loss.toFixed(2);
-
-            //     conn.removeAllOverlays();
-
-            //     conn.setPaintStyle({
-            //         stroke: color,
-            //         strokeWidth: 2,
-            //         dashstyle: dash
-            //     });
-
-            //     conn.setConnector(['Flowchart', {
-            //         cornerRadius: 2,
-            //         stub: 30
-            //     }]);
-
-            //     conn.addOverlay(['Label', {
-            //         label: `-${labelLoss} dB`,
-            //         location: 0.5,
-            //         cssClass: 'myLabel',
-            //         css: {
-            //             color: 'red',
-            //             fontSize: '13px',
-            //             fontWeight: 'bold',
-            //             background: 'white',
-            //             padding: '2px 4px',
-            //             borderRadius: '4px',
-            //             border: '1px solid #ddd'
-            //         }
-            //     }]);
-
-            //     conn.addOverlay(['Arrow', {
-            //         width: 12,
-            //         length: 12,
-            //         location: 1,
-            //         foldback: 0.7,
-            //         paintStyle: {
-            //             fill: color
-            //         }
-            //     }]);
-            // });
-
             /**
              * Menghapus aksi terakhir (undo).
              */
@@ -1375,10 +1321,13 @@
                         length: link.length
                     })),
                     power: parseFloat(inputPower?.value || 0),
+                    splicing: parseInt(inputSplicing?.value || 0), // ✅ Tambahan
+                    connectors: parseInt(document.getElementById('connectors')?.value || 0), // ✅ Tambahan
                     name: lab?.name || 'topologi',
                     author: lab?.author || '',
                     description: lab?.description || ''
                 };
+
 
                 if (topology.nodes.length === 0 || topology.connections.length === 0) {
                     Swal.fire({
@@ -1497,10 +1446,14 @@
                         length: link.length
                     })),
                     power: parseFloat(inputPower?.value || 0),
+                    splicing: parseInt(inputSplicing?.value || 0), // ✅ Tambahan
+                    connectors: parseInt(document.getElementById('connectors')?.value ||
+                        0), // ✅ Tambahan
                     name: '{{ $lab['name'] ?? '' }}',
                     author: '{{ $lab['author'] ?? '' }}',
                     description: '{{ $lab['description'] ?? '' }}'
                 };
+
                 console.log('Topology data:', topology);
 
                 const labId = mapCanvas.dataset.labId;

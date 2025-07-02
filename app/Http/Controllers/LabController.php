@@ -36,6 +36,8 @@ class LabController extends Controller
             'nodes' => 'required|array',
             'connections' => 'required|array',
             'power' => 'nullable|numeric',
+            'splicing' => 'nullable|integer', // ✅ Tambah
+            'connectors' => 'nullable|integer', // ✅ Tambah
             'name' => 'nullable|string',
             'author' => 'nullable|string',
             'description' => 'nullable|string',
@@ -60,6 +62,8 @@ class LabController extends Controller
                 'name' => $data['name'] ?? $lab->name,
                 'author' => $data['author'] ?? $lab->author,
                 'description' => $data['description'] ?? $lab->description,
+                'splicing' => $data['splicing'] ?? 0, // ✅ Tambah
+                'connectors' => $data['connectors'] ?? 0, // ✅ Tambah
             ]
         );
 
@@ -202,6 +206,8 @@ class LabController extends Controller
             'nodes' => [],
             'connections' => [],
             'power' => null,
+            'splicing' => 0, // ✅ Tambah
+            'connectors' => 0, // ✅ Tambah
             'name' => $request->name,
             'author' => $request->author,
             'description' => $request->description,
@@ -382,6 +388,8 @@ class LabController extends Controller
             'connections' => json_encode($json['connections'] ?? []),
             'power' => $json['power'] ?? null,
             'description' => $json['description'] ?? null,
+            'splicing' => $json['splicing'] ?? 0, // ✅ Tambah
+            'connectors' => $json['connectors'] ?? 0, // ✅ Tambah
             'is_autosaved' => 0,
         ]);
 

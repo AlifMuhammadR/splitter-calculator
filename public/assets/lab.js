@@ -104,8 +104,11 @@ function previewLab(labId) {
                     </div>
                     <div class="card-body">
                         <div>Total Loss: <span class="text-danger fw-bold">${totalLoss.toFixed(2)} dB</span></div>
-                        <div>Output Power: <span class="text-primary fw-bold">${(outputNode?.power ?? 0).toFixed(2)} dBm</span></div>
-                        <div>Jalur: ${data.nodes?.[0]?.type || '?'} → ${outputNode?.type || '?'}</div>
+<div>Total cable loss: 50m x ${(data.connections[0]?.cable === 'Patchcord' ? 0.0003 : 0.0002).toFixed(4)} dB/m = ${(data.connections.reduce((sum, c) => sum + (c.length || 0), 0) * (data.connections[0]?.cable === 'Patchcord' ? 0.0003 : 0.0002)).toFixed(3)} dB</div>
+<div>Total loss splicing: ${data.splicing || 0} x 0.1dB = ${((data.splicing || 0) * 0.1).toFixed(2)} dB</div>
+<div>Connector loss: ${data.connectors || 0} x 0.2dB = ${((data.connectors || 0) * 0.2).toFixed(2)} dB</div>
+<div>Output Power: <span class="text-primary fw-bold">${(outputNode?.power ?? 0).toFixed(2)} dBm</span></div>
+<div>Jalur: ${data.nodes?.[0]?.type || '?'} → ${outputNode?.type || '?'}</div>
                     </div>
                 </div>
             `;
